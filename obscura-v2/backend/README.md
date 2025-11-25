@@ -1,350 +1,301 @@
-# Obscura v2 Backend
+# Obscura V2 Backend - Modular Monolith Architecture
 
-Production-grade decentralized copy-trading infrastructure powered by **Nillion**, **NEAR Chain Signatures**, and **Zcash**.
+Privacy-preserving copy trading platform with secure credential storage and shielded payments.
 
 ## 🏗️ Architecture Overview
 
-This backend implements the "Grand Slam" feature lineup for maximum hackathon impact:
+This backend follows a **Modular Monolith** architecture, allowing both unified deployment and standalone microservices deployment.
 
-1. **Citadel (Nillion)** - Decentralized secret storage using Nillion's `nilDB` and blind computation (`nilCC`)
-2. **Conductor (NEAR MPC)** - Cross-chain transaction signing via NEAR's Multi-Party Computation network
-3. **Payments (Zcash)** - Shielded subscription payments for privacy-preserving monetization
+```
+backend/
+├── shared/                     # Cross-cutting concerns
+│   ├── config.py              # Centralized configuration
+│   ├── database/              # Database models & connections
+│   │   ├── connection.py      # AsyncPG connection pool
+│   │   └── models.py          # SQLAlchemy models
+│   └── services/              # Shared services
+│       └── redis_service.py   # Redis caching & pub/sub
+│
+├── modules/                    # Domain-bounded modules
+│   ├── api_gateway/           # Unified entry point
+│   ├── trading/               # Multi-exchange trading
+│   ├── subscriptions/         # Zcash billing
+│   ├── copy_trading/          # Trade monitoring & copying
+│   ├── analytics/             # Performance metrics
+│   └── citadel/               # Nillion secure storage
+│
+├── alembic/                   # Database migrations
+├── docker-compose.yml         # Full stack orchestration
+└── requirements.txt           # Unified dependencies
+```
 
-### Key Features
+## 🚀 Quick Start
 
-- ✅ **No centralized key storage** - API keys secured in Nillion's distributed network
-- ✅ **Cross-chain execution** - Sign transactions for EVM chains (Base, Ethereum, etc.) from NEAR
-- ✅ **Shielded payments** - Accept ZEC subscriptions with full privacy guarantees
-- ✅ **Zero-Knowledge proofs** - Trading reputation verified without revealing strategies
+### Prerequisites
+- Docker & Docker Compose
+- Python 3.11+
+- PostgreSQL 15+ (or use Docker)
+- Redis 7+ (or use Docker)
 
-## 📋 Prerequisites
+### 1. Clone & Configure
 
-### 1. Nillion Setup (Citadel)
-
-**Option A: Use Nillion Testnet (Recommended)**
 ```bash
-# Install the secretvaults SDK
-pip install git+https://github.com/NillionNetwork/secretvaults-py.git
+# Copy environment template
+cp .env.example .env
 
-# Set environment variables
-export NILLION_NETWORK_URL="https://testnet.nillion.network"
-export NILLION_API_KEY="your-api-key"  # Get from Nillion dashboard
+# Edit with your credentials
+nano .env
 ```
 
-**Option B: Local Development (Mock Mode)**
+### 2. Start with Docker (Recommended)
+
 ```bash
-# Leave NILLION_NETWORK_URL unset - the client will run in mock mode
-# This is fine for initial development and testing
+# Start full stack (API Gateway + Infrastructure)
+docker-compose up -d
+
+# Check status
+docker-compose ps
+
+# View logs
+docker-compose logs -f api-gateway
 ```
 
-### 2. NEAR Chain Signatures Setup (Conductor)
+### 3. Run Migrations
 
-**Option A: Use a Relayer (Easiest for Dev)**
 ```bash
-# Clone the NEAR chainsig example
-git clone https://github.com/near-examples/chainsig-script.git
-cd chainsig-script
-
-# Install dependencies
-yarn install
-
-# Set up your .env file
-cp .env-sample .env
-# Edit .env with your NEAR testnet account details
-
-# The example repo provides ready-to-use signing functions
-# You can wrap these in a simple HTTP server for your relayer
+# Run database migrations
+docker-compose --profile migrations up migrations
 ```
 
-**Minimal Relayer Server (Python)**
-```python
-# Save as relayer.py and run alongside your backend
-from fastapi import FastAPI
-import subprocess
-import json
+## 📦 Module Deployment Options
 
-app = FastAPI()
+### Option A: Modular Monolith (Default)
 
-@app.post("/sign")
-async def sign_transaction(request: dict):
-    # Call the NEAR chainsig script
-    result = subprocess.check_output([
-        "node", "path/to/chainsig-script/index.js",
-        "--payload", request["payload"],
-        "--path", request["path"]
-    ])
-    return json.loads(result)
+All modules run within the API Gateway:
 
-# Run: uvicorn relayer:app --port 8080
-```
-
-**Set environment variable:**
 ```bash
-export NEAR_CHAINSIG_RELAYER_URL="http://localhost:8080/sign"
+docker-compose up -d api-gateway postgres redis
 ```
 
-**Option B: Direct RPC Mode**
+**Ports:**
+- API Gateway: `http://localhost:8000`
+
+### Option B: Standalone Services
+
+Deploy individual modules as microservices:
+
 ```bash
-# For production, call the MPC contract directly
-export NEAR_MPC_CONTRACT_ID="v1.signer-prod.testnet"
-export NEAR_MPC_PUBLIC_KEY="secp256k1:4NfTiv3UsGahebgTaHyD9vF8KYKMBnfd6kh94mK6xv8fGBiJB8TBtFMP5WWXz6B89Ac1fbpzPwAvoyQebemHFwx3"
-export NEAR_RPC_URL="https://rpc.testnet.near.org"
-export NEAR_ACCOUNT_ID="your-account.testnet"
-export NEAR_PRIVATE_KEY="ed25519:your-private-key"
+# Start infrastructure
+docker-compose up -d postgres redis
+
+# Start specific services
+docker-compose --profile standalone up -d trading
+docker-compose --profile standalone up -d subscriptions
+docker-compose --profile standalone up -d analytics
+docker-compose --profile standalone up -d citadel
+docker-compose --profile standalone up -d copy-trading
 ```
 
-### 3. Zcash Setup (Payments)
+**Ports:**
+- Trading: `http://localhost:8001`
+- Subscriptions: `http://localhost:8002`
+- Copy Trading: `http://localhost:8003`
+- Analytics: `http://localhost:8004`
+- Citadel: `http://localhost:8005`
 
-**Download Zecwallet CLI:**
+### Option C: Full Microservices
+
+Deploy all services separately:
+
 ```bash
-# Linux/macOS
-wget https://github.com/adityapk00/zecwallet-light-cli/releases/download/v1.7.7/linux-zecwallet-cli-v1.7.7.zip
-unzip linux-zecwallet-cli-v1.7.7.zip
-chmod +x zecwallet-cli
-
-# Set environment variable
-export ZECWALLET_CLI_PATH="/path/to/zecwallet-cli"
+docker-compose --profile full up -d
 ```
 
-**Optional: Set wallet password**
-```bash
-export ZECWALLET_DECRYPTION_KEY="your-wallet-password"
-```
+## 🔧 Local Development
 
-## 🚀 Installation
+### Setup Virtual Environment
 
 ```bash
 # Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or: .\venv\Scripts\activate  # Windows
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Install optional packages (if not on PyPI)
-pip install git+https://github.com/NillionNetwork/secretvaults-py.git
 ```
 
-## ⚙️ Configuration
-
-Create a `.env` file in the `backend/` directory:
+### Run Individual Modules
 
 ```bash
-# Nillion Configuration
-NILLION_NETWORK_URL=https://testnet.nillion.network
-NILLION_API_KEY=your-nillion-api-key
+# Start API Gateway
+cd modules/api_gateway
+uvicorn gateway:app --reload --port 8000
 
-# NEAR Chain Signatures
-NEAR_CHAINSIG_RELAYER_URL=http://localhost:8080/sign
-# OR for direct mode:
-# NEAR_MPC_CONTRACT_ID=v1.signer-prod.testnet
-# NEAR_ACCOUNT_ID=yourname.testnet
-# NEAR_PRIVATE_KEY=ed25519:...
+# Start Trading Service
+cd modules/trading
+uvicorn service:app --reload --port 8001
 
-# Zcash Payments
-ZECWALLET_CLI_PATH=/path/to/zecwallet-cli
-ZECWALLET_DECRYPTION_KEY=optional-wallet-password
-
-# Application Settings
-DATABASE_URL=postgresql://user:pass@localhost/obscura
-SECRET_KEY=your-secret-key-for-jwt
+# Start Analytics Service
+cd modules/analytics
+uvicorn service:app --reload --port 8004
 ```
 
-## 🧪 Testing the Integrations
+## 📚 API Documentation
 
-### Test Nillion Client
+Once running, access the OpenAPI docs:
 
-```python
-import asyncio
-from citadel.nillion_client import nillion
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
+- **OpenAPI JSON**: `http://localhost:8000/openapi.json`
 
-async def test_nillion():
-    # Store a secret
-    store_id = await nillion.store_secret("my-api-key-secret", "binance-key-1")
-    print(f"Stored secret: {store_id}")
-    
-    # Compute a signature using the secret
-    signature = await nillion.compute_signature(store_id, b"transaction-payload")
-    print(f"Signature: {signature}")
+### Key Endpoints
 
-asyncio.run(test_nillion())
-```
+| Module | Endpoint | Description |
+|--------|----------|-------------|
+| Auth | `POST /api/v1/auth/register` | User registration |
+| Auth | `POST /api/v1/auth/login` | User login |
+| Trading | `POST /api/v1/trading/execute` | Execute trade |
+| Trading | `GET /api/v1/trading/balances` | Get balances |
+| Subscriptions | `POST /api/v1/subscriptions/subscribe` | Create subscription |
+| Copy Trading | `POST /api/v1/copy/follow` | Follow a trader |
+| Analytics | `GET /api/v1/analytics/leaderboard` | Get leaderboard |
+| Citadel | `POST /api/v1/keys/store` | Store API keys |
 
-### Test NEAR MPC Client
+## 🔐 Security Features
 
-```python
-import asyncio
-from conductor.near_client import near_mpc
+### Nillion SecretVault (Citadel)
+- Secure credential storage using blind compute
+- API keys never exposed in plaintext
+- MPC-based key management
 
-async def test_near():
-    # Derive an Ethereum address
-    eth_address = near_mpc.derive_eth_address("yourname.testnet", "ethereum-1")
-    print(f"Derived ETH address: {eth_address}")
-    
-    # Request a signature (requires relayer or full setup)
-    payload = b"x00" * 32  # 32-byte transaction hash
-    signature = await near_mpc.request_signature(payload, "ethereum-1", "yourname.testnet")
-    print(f"Signature: {signature}")
+### Zcash Shielded Transactions (Subscriptions)
+- Private subscription payments
+- No transaction graph exposure
+- Automatic payment verification
 
-asyncio.run(test_near())
-```
+### Zero-Knowledge Proofs
+- Trade execution without exposing strategy
+- Privacy-preserving portfolio analytics
+- Verifiable trade copying
 
-### Test Zcash Client
+## 📊 Module Details
 
-```python
-from payments.zcash_client import zcash
+### Trading Module
+- **100+ Exchange Support** via CCXT
+- CEX: Binance, Coinbase, Kraken, etc.
+- DEX: Uniswap, SushiSwap, PancakeSwap
+- Smart order routing
+- Rate limiting & retry logic
 
-# Generate a new unified address
-address = zcash.get_new_unified_address()
-print(f"New UA: {address}")
+### Copy Trading Module
+- Real-time trade monitoring
+- Proportional position sizing
+- Configurable risk limits
+- Automatic trade execution
 
-# Watch for payment
-zcash.watch_address(address, 0.01)  # Expect 0.01 ZEC
+### Analytics Module
+- Performance metrics (ROI, Sharpe, etc.)
+- Leaderboard rankings
+- Trade history analysis
+- Portfolio tracking
 
-# Check payment status
-import asyncio
-paid = asyncio.run(zcash.check_payment(address))
-print(f"Payment received: {paid}")
+### Subscriptions Module
+- Zcash payment processing
+- Tier-based access control
+- Automatic renewal
+- Usage tracking
 
-# For demo/testing: simulate payment
-zcash.simulate_payment(address)
-```
+### Citadel Module
+- Nillion integration
+- Secure key storage
+- Blind compute operations
+- Encrypted data handling
 
-## 🎯 Usage Examples
-
-### Store Exchange API Keys Securely
-
-```python
-from citadel.nillion_client import nillion
-
-async def store_user_keys(user_id: str, api_key: str, api_secret: str):
-    """Store user's exchange API credentials in Nillion."""
-    key_store_id = await nillion.store_secret(api_key, f"user-{user_id}-key")
-    secret_store_id = await nillion.store_secret(api_secret, f"user-{user_id}-secret")
-    
-    # Save store_ids to your database
-    return {"key_id": key_store_id, "secret_id": secret_store_id}
-```
-
-### Execute Cross-Chain Trade
-
-```python
-from conductor.near_client import near_mpc
-from eth_account import Account
-from web3 import Web3
-
-async def execute_trade_on_base(user_near_account: str, swap_data: bytes):
-    """Sign and execute a trade on Base using NEAR MPC."""
-    
-    # Derive the user's controlled address on Base
-    base_address = near_mpc.derive_eth_address(user_near_account, "base-trading-1")
-    
-    # Build transaction
-    tx = {
-        "to": "0x...",  # DEX router address
-        "data": swap_data,
-        "gas": 200000,
-        "nonce": ...,
-    }
-    
-    # Get transaction hash
-    w3 = Web3()
-    tx_hash = w3.keccak(...)  # Serialize and hash the transaction
-    
-    # Request signature from NEAR MPC
-    signature = await near_mpc.request_signature(tx_hash, "base-trading-1", user_near_account)
-    
-    # Combine transaction + signature and broadcast
-    # ...
-    
-    return tx_hash.hex()
-```
-
-### Process Shielded Subscription Payment
-
-```python
-from payments.zcash_client import zcash
-
-async def create_subscription(trader_id: str, plan: str) -> str:
-    """Generate a payment address for trader subscription."""
-    
-    # Generate unique address for this subscription
-    payment_address = zcash.get_new_unified_address()
-    
-    # Define subscription tiers
-    tiers = {"basic": 0.1, "pro": 0.5, "enterprise": 2.0}
-    amount_zec = tiers[plan]
-    
-    # Watch for payment
-    zcash.watch_address(payment_address, amount_zec)
-    
-    return payment_address
-
-async def verify_subscription_payment(payment_address: str) -> bool:
-    """Check if subscription payment was received."""
-    return await zcash.check_payment(payment_address, min_confirmations=2)
-```
-
-## 🎪 Demo Mode
-
-All three clients support mock mode for development without external dependencies:
+## 🧪 Testing
 
 ```bash
-# Run without any environment variables
-python -m citadel.nillion_client  # Mock Nillion
-python -m conductor.near_client   # Mock NEAR MPC
-python -m payments.zcash_client   # Mock Zcash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=modules --cov-report=html
+
+# Run specific module tests
+pytest modules/trading/tests/
+pytest modules/analytics/tests/
 ```
 
-The clients will automatically detect missing SDKs and run in demonstration mode while maintaining compatible interfaces.
+## 🐳 Docker Build
 
-## 🔐 Security Best Practices
+### Build Individual Modules
 
-1. **Never commit `.env` files** - Add to `.gitignore`
-2. **Rotate NEAR keys regularly** - Use separate keys for dev/prod
-3. **Encrypt Zecwallet** - Always use wallet encryption in production
-4. **Validate derivation paths** - Sanitize user-provided paths to prevent path traversal
-5. **Rate limit signature requests** - Prevent abuse of MPC signing service
-6. **Monitor Nillion quotas** - Track API usage to avoid service interruptions
+```bash
+# Build trading module
+docker build -f modules/trading/Dockerfile -t obscura-trading .
 
-## 📚 Additional Resources
+# Build citadel module
+docker build -f modules/citadel/Dockerfile -t obscura-citadel .
+```
 
-### Nillion
-- [Nillion Docs](https://docs.nillion.com)
-- [SecretVaults Python Examples](https://github.com/NillionNetwork/secretvaults-py/tree/main/examples)
-- [Blind Computation Guide](https://docs.nillion.com/build/compute/overview)
+### Build All Modules
 
-### NEAR Chain Signatures
-- [Official Documentation](https://docs.near.org/chain-abstraction/chain-signatures)
-- [Example Scripts](https://github.com/near-examples/chainsig-script)
-- [MPC Contract Source](https://github.com/near/mpc)
+```bash
+docker-compose build
+```
 
-### Zcash
-- [Unified Addresses Explained](https://z.cash/learn/what-are-zcash-unified-addresses/)
-- [Zecwallet Python Wrapper](https://github.com/P5vc/zecwallet-python)
-- [Zcash Developer Docs](https://z.cash/learn/)
+## 📝 Environment Variables
 
-## 🏆 Hackathon Bounty Alignment
+See `.env.example` for all configuration options. Key variables:
 
-This implementation targets:
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DATABASE_URL` | PostgreSQL connection | Yes |
+| `REDIS_URL` | Redis connection | Yes |
+| `SECRET_KEY` | JWT signing key | Yes |
+| `NILLION_ORG_SECRET_KEY` | Nillion auth | For Citadel |
+| `ZCASH_NODE_URL` | Zcash node | For Subscriptions |
 
-- **NEAR Cross-Chain** ($20k) - Chain signatures for Base/EVM execution
-- **Nillion** ($25k NIL) - Decentralized secret storage for API keys
-- **Zcash Community** ($5k) - Shielded payment integration
-- **Project Tachyon** ($35k pool) - Privacy infrastructure
-- **General Cross-Chain** ($55k pool) - Multi-chain architecture
+## 🔄 Database Migrations
 
-**Total Potential:** $100k+
+```bash
+# Create new migration
+alembic revision --autogenerate -m "description"
+
+# Apply migrations
+alembic upgrade head
+
+# Rollback last migration
+alembic downgrade -1
+
+# View migration history
+alembic history
+```
+
+## 📈 Monitoring
+
+### Health Checks
+
+Each module exposes a health endpoint:
+
+```bash
+curl http://localhost:8000/health
+curl http://localhost:8001/health
+# etc.
+```
+
+### Prometheus Metrics
+
+Metrics available at `/metrics` endpoint (when enabled).
 
 ## 🤝 Contributing
 
-This is a hackathon project. For production use:
-- Implement comprehensive error handling
-- Add transaction retry logic
-- Set up monitoring/alerting
-- Perform security audits
-- Add comprehensive test coverage
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests
+5. Submit a pull request
 
 ## 📄 License
 
-MIT License - See LICENSE file for details
+MIT License - see LICENSE file for details.

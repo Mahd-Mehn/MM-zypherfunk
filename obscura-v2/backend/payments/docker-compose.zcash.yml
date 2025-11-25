@@ -1,0 +1,207 @@
+# =============================================================================
+# Obscura V2 - Zcash Full Stack Docker Compose
+# =============================================================================
+# This compose file sets up a complete Zcash payment infrastructure:
+#
+# 1. zcashd - Full Zcash node
+# 2. lightwalletd - Light wallet backend service  
+# 3. payments - Obscura payments FastAPI service
+#
+# Usage:
+#   Development (testnet):  docker-compose -f docker-compose.zcash.yml up -d
+#   Production (mainnet):   docker-compose -f docker-compose.zcash.yml -f docker-compose.zcash.prod.yml up -d
+#
+# Note: First sync can take several hours. Use a public lightwalletd for faster dev.
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # Zcash Full Node (zcashd)
+  # ===========================================================================
+  # Only needed if running your own lightwalletd
+  # For development, you can use public lightwalletd servers instead
+  
+  zcashd:
+    image: electriccoinco/zcashd:v5.8.0
+    container_name: obscura-zcashd
+    restart: unless-stopped
+    volumes:
+      - zcashd_data:/home/zcash/.zcash
+      - zcashd_params:/home/zcash/.zcash-params
+      - ./config/zcash.conf:/home/zcash/.zcash/zcash.conf:ro
+    ports:
+      # Testnet P2P
+      - "18233:18233"
+      # Testnet RPC (internal only by default)
+      # - "18232:18232"
+    environment:
+      ZCASHD_NETWORK: ${ZCASH_NETWORK:-testnet}
+    healthcheck:
+      test: ["CMD", "zcash-cli", "-rpcuser=zcashrpc", "-rpcpassword=${ZCASH_RPC_PASSWORD:-changeme}", "getblockchaininfo"]
+      interval: 60s
+      timeout: 30s
+      retries: 5
+      start_period: 300s  # Allow 5 min for initial sync check
+    networks:
+      - zcash-network
+    profiles:
+      - full-node
+
+  # ===========================================================================
+  # Lightwalletd - Light Wallet Backend
+  # ===========================================================================
+  # Connects to zcashd and provides efficient gRPC API for light wallets
+  
+  lightwalletd:
+    image: electriccoinco/lightwalletd:v0.4.18
+    container_name: obscura-lightwalletd
+    restart: unless-stopped
+    depends_on:
+      zcashd:
+        condition: service_healthy
+    volumes:
+      - lightwalletd_data:/var/lib/lightwalletd/db
+      - ./config/zcash.conf:/etc/zcash/zcash.conf:ro
+    ports:
+      # gRPC port for wallet connections
+      - "${LIGHTWALLETD_PORT:-9067}:9067"
+      # HTTP port for metrics (optional)
+      - "${LIGHTWALLETD_HTTP_PORT:-9068}:9068"
+    command:
+      - --grpc-bind-addr=0.0.0.0:9067
+      - --http-bind-addr=0.0.0.0:9068
+      - --no-tls-very-insecure
+      - --rpchost=zcashd
+      - --rpcport=${ZCASH_RPC_PORT:-18232}
+      - --rpcuser=zcashrpc
+      - --rpcpassword=${ZCASH_RPC_PASSWORD:-changeme}
+      - --data-dir=/var/lib/lightwalletd/db
+      - --log-file=/dev/stdout
+    healthcheck:
+      test: ["CMD", "grpcurl", "-plaintext", "localhost:9067", "cash.z.wallet.sdk.rpc.CompactTxStreamer/GetLightdInfo"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - zcash-network
+    profiles:
+      - full-node
+
+  # ===========================================================================
+  # Payments Service - Obscura Zcash Integration
+  # ===========================================================================
+  # FastAPI service for handling Zcash shielded payments
+  
+  payments:
+    build:
+      context: ..
+      dockerfile: payments/Dockerfile
+    container_name: obscura-payments
+    restart: unless-stopped
+    ports:
+      - "${PAYMENTS_PORT:-8005}:8000"
+    environment:
+      # Database
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-obscura}:${POSTGRES_PASSWORD:-obscura_secret}@${POSTGRES_HOST:-postgres}:5432/${POSTGRES_DB:-obscura}
+      
+      # Redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-obscura_redis}@${REDIS_HOST:-redis}:6379/0
+      
+      # Lightwalletd connection
+      # Option 1: Use local lightwalletd (when running full-node profile)
+      # LIGHTWALLETD_URL: lightwalletd:9067
+      # Option 2: Use public lightwalletd (faster for development)
+      LIGHTWALLETD_URL: ${LIGHTWALLETD_URL:-https://mainnet.lightwalletd.com:9067}
+      
+      # Zcash network
+      ZCASH_NETWORK: ${ZCASH_NETWORK:-testnet}
+      
+      # Wallet configuration  
+      ZECWALLET_CLI_PATH: /usr/local/bin/zecwallet-cli
+      WALLET_DATA_DIR: /app/data/wallet
+      ZECWALLET_DECRYPTION_KEY: ${ZECWALLET_DECRYPTION_KEY:-}
+      
+      # Application
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
+      DEBUG: ${DEBUG:-false}
+    volumes:
+      - payments_wallet_data:/app/data/wallet
+      - payments_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - zcash-network
+      - obscura-network
+
+  # ===========================================================================
+  # Payments Service - Standalone (connects to public lightwalletd)
+  # ===========================================================================
+  # Use this for quick development without running zcashd/lightwalletd
+  
+  payments-standalone:
+    build:
+      context: ..
+      dockerfile: payments/Dockerfile
+    container_name: obscura-payments-standalone
+    restart: unless-stopped
+    ports:
+      - "${PAYMENTS_PORT:-8005}:8000"
+    environment:
+      # Use public testnet lightwalletd
+      LIGHTWALLETD_URL: ${LIGHTWALLETD_URL:-https://testnet.lightwalletd.com:9067}
+      ZCASH_NETWORK: ${ZCASH_NETWORK:-testnet}
+      
+      # Wallet configuration
+      ZECWALLET_CLI_PATH: /usr/local/bin/zecwallet-cli
+      WALLET_DATA_DIR: /app/data/wallet
+      
+      # Application
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key}
+      DEBUG: ${DEBUG:-true}
+    volumes:
+      - payments_wallet_data:/app/data/wallet
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - obscura-network
+    profiles:
+      - standalone
+
+# ===========================================================================
+# Networks
+# ===========================================================================
+
+networks:
+  zcash-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/16
+  
+  obscura-network:
+    external: true
+    name: obscura-v2_obscura-network
+
+# ===========================================================================
+# Volumes
+# ===========================================================================
+
+volumes:
+  zcashd_data:
+    driver: local
+  zcashd_params:
+    driver: local
+  lightwalletd_data:
+    driver: local
+  payments_wallet_data:
+    driver: local
+  payments_logs:
+    driver: local

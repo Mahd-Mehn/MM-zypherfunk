@@ -42,7 +42,12 @@ async def sign_payload(request: SignRequest):
     Request a blind signature from the Nillion Network.
     """
     try:
-        signature = await nillion.compute_signature(request.store_id, request.payload_hash)
+        # Convert hex string to bytes if needed
+        if isinstance(request.payload_hash, str):
+            payload_bytes = bytes.fromhex(request.payload_hash.replace('0x', ''))
+        else:
+            payload_bytes = request.payload_hash
+        signature = await nillion.compute_signature(request.store_id, payload_bytes)
         return {"signature": signature, "status": "signed_by_nilcc"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

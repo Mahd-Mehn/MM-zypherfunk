@@ -5,6 +5,9 @@ pydantic-settings==2.1.0
 httpx==0.26.0
 sqlalchemy==2.0.25
 psycopg2-binary==2.9.9
+asyncpg>=0.29.0  # Async PostgreSQL driver
+aiosqlite>=0.19.0  # Async SQLite driver
+alembic>=1.13.0  # Database migrations
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
@@ -14,21 +17,40 @@ python-multipart==0.0.6
 # secretvaults-py>=0.1.0  # install from: pip install git+https://github.com/NillionNetwork/secretvaults-py.git
 
 # NEAR chain signatures
-near-api-py>=0.2.0
-eth-account>=0.11.0  # For EVM address derivation from NEAR MPC
-eth-keys>=0.5.0
+near-api-py
+eth-account  # For EVM address derivation from NEAR MPC
+eth-keys
 
 # Zcash shielded payments (https://github.com/P5vc/zecwallet-python)
-zecwallet>=0.0.5
+zecwallet
 
 # Trading Infrastructure
-ccxt>=4.2.0  # Unified exchange API for CEXes (Binance, Coinbase, etc.)
-web3>=6.0.0  # Ethereum/Base DEX integration (Uniswap)
-starknet-py>=0.20.0  # Starknet DEX integration
+ccxt # Unified exchange API for 100+ CEXes and DEXes
+web3  # Ethereum/Base DEX integration (Uniswap)
+starknet-py  # Starknet DEX integration
 
 # Production utilities
 python-dotenv>=1.0.0
 aiohttp>=3.9.0  # Async HTTP client
+redis>=5.0.0  # Caching and session management
+celery>=5.3.0  # Background task processing
+prometheus-client>=0.19.0  # Metrics and monitoring
+
+# Rate limiting and resilience
+slowapi>=0.1.9  # Rate limiting for FastAPI
+tenacity>=8.2.0  # Retry logic with backoff
+circuitbreaker>=2.0.0  # Circuit breaker pattern
+
+# Logging and observability
+structlog>=24.1.0  # Structured logging
+sentry-sdk>=1.39.0  # Error tracking
+
+# Testing
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0
+httpx>=0.26.0  # For testing FastAPI
 
 # Note: If a package is not available on PyPI, install from git:
 # pip install git+https://github.com/NillionNetwork/secretvaults-py.git
+

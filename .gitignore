@@ -242,3 +242,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+*.csv
+obscura-v2/backend/PROJECT_STATUS.md

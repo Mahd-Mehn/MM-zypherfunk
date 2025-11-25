@@ -1,0 +1,55 @@
+# =============================================================================
+# Obscura V2 - Zcash Production Docker Compose Override
+# =============================================================================
+# Use with: docker-compose -f docker-compose.zcash.yml -f docker-compose.zcash.prod.yml up -d
+# =============================================================================
+
+version: '3.8'
+
+services:
+  zcashd:
+    environment:
+      ZCASHD_NETWORK: mainnet
+    volumes:
+      - ./config/zcash.mainnet.conf:/home/zcash/.zcash/zcash.conf:ro
+    ports:
+      # Mainnet P2P
+      - "8233:8233"
+
+  lightwalletd:
+    command:
+      - --grpc-bind-addr=0.0.0.0:9067
+      - --http-bind-addr=0.0.0.0:9068
+      - --tls-cert=/etc/lightwalletd/cert.pem
+      - --tls-key=/etc/lightwalletd/key.pem
+      - --rpchost=zcashd
+      - --rpcport=8232
+      - --rpcuser=zcashrpc
+      - --rpcpassword=${ZCASH_RPC_PASSWORD}
+      - --data-dir=/var/lib/lightwalletd/db
+      - --log-file=/var/log/lightwalletd/server.log
+    volumes:
+      - lightwalletd_data:/var/lib/lightwalletd/db
+      - lightwalletd_logs:/var/log/lightwalletd
+      - ./config/zcash.mainnet.conf:/etc/zcash/zcash.conf:ro
+      # TLS certificates (generate with Let's Encrypt)
+      - ./certs/cert.pem:/etc/lightwalletd/cert.pem:ro
+      - ./certs/key.pem:/etc/lightwalletd/key.pem:ro
+
+  payments:
+    environment:
+      LIGHTWALLETD_URL: lightwalletd:9067
+      ZCASH_NETWORK: mainnet
+      DEBUG: "false"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  lightwalletd_logs:
+    driver: local

@@ -1,0 +1,328 @@
+# =============================================================================
+# Obscura V2 - Modular Monolith Docker Compose
+# =============================================================================
+# This configuration supports both monolithic and microservices deployment modes.
+# 
+# Usage:
+#   Full stack:     docker-compose up -d
+#   Gateway only:   docker-compose up -d api-gateway postgres redis
+#   Trading only:   docker-compose up -d trading postgres redis
+#   Analytics only: docker-compose up -d analytics postgres redis
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # Infrastructure Services
+  # ===========================================================================
+  
+  postgres:
+    image: postgres:15-alpine
+    container_name: obscura-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-obscura}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-obscura_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-obscura}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-obscura} -d ${POSTGRES_DB:-obscura}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - obscura-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: obscura-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-obscura_redis}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-obscura_redis}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - obscura-network
+
+  # ===========================================================================
+  # API Gateway - Unified Entry Point (Modular Monolith Mode)
+  # ===========================================================================
+  
+  api-gateway:
+    build:
+      context: .
+      dockerfile: modules/api_gateway/Dockerfile
+    container_name: obscura-api-gateway
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      # Database
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-obscura}:${POSTGRES_PASSWORD:-obscura_secret}@postgres:5432/${POSTGRES_DB:-obscura}
+      
+      # Redis
+      REDIS_URL: redis://:${REDIS_PASSWORD:-obscura_redis}@redis:6379/0
+      
+      # Nillion (Citadel)
+      NILLION_ORG_SECRET_KEY: ${NILLION_ORG_SECRET_KEY:-}
+      NILLION_SCHEMA_ID: ${NILLION_SCHEMA_ID:-}
+      NILLION_NODE_URL: ${NILLION_NODE_URL:-}
+      
+      # Zcash (Subscriptions)
+      ZCASH_NODE_URL: ${ZCASH_NODE_URL:-}
+      ZCASH_RPC_USER: ${ZCASH_RPC_USER:-}
+      ZCASH_RPC_PASSWORD: ${ZCASH_RPC_PASSWORD:-}
+      
+      # Application
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
+      DEBUG: ${DEBUG:-false}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - obscura-network
+    volumes:
+      - ./logs:/app/logs
+
+  # ===========================================================================
+  # Trading Module - Standalone Deployment
+  # ===========================================================================
+  
+  trading:
+    build:
+      context: .
+      dockerfile: modules/trading/Dockerfile
+    container_name: obscura-trading
+    restart: unless-stopped
+    ports:
+      - "${TRADING_PORT:-8001}:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-obscura}:${POSTGRES_PASSWORD:-obscura_secret}@postgres:5432/${POSTGRES_DB:-obscura}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-obscura_redis}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
+      DEBUG: ${DEBUG:-false}
+      
+      # Exchange API Keys (for system-level operations)
+      BINANCE_API_KEY: ${BINANCE_API_KEY:-}
+      BINANCE_API_SECRET: ${BINANCE_API_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - obscura-network
+    profiles:
+      - standalone
+      - full
+
+  # ===========================================================================
+  # Subscriptions Module - Standalone Deployment
+  # ===========================================================================
+  
+  subscriptions:
+    build:
+      context: .
+      dockerfile: modules/subscriptions/Dockerfile
+    container_name: obscura-subscriptions
+    restart: unless-stopped
+    ports:
+      - "${SUBSCRIPTIONS_PORT:-8002}:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-obscura}:${POSTGRES_PASSWORD:-obscura_secret}@postgres:5432/${POSTGRES_DB:-obscura}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-obscura_redis}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
+      
+      # Zcash Configuration
+      ZCASH_NODE_URL: ${ZCASH_NODE_URL:-http://localhost:8232}
+      ZCASH_RPC_USER: ${ZCASH_RPC_USER:-}
+      ZCASH_RPC_PASSWORD: ${ZCASH_RPC_PASSWORD:-}
+      ZCASH_WALLET_ADDRESS: ${ZCASH_WALLET_ADDRESS:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - obscura-network
+    profiles:
+      - standalone
+      - full
+
+  # ===========================================================================
+  # Copy Trading Module - Standalone Deployment
+  # ===========================================================================
+  
+  copy-trading:
+    build:
+      context: .
+      dockerfile: modules/copy_trading/Dockerfile
+    container_name: obscura-copy-trading
+    restart: unless-stopped
+    ports:
+      - "${COPY_TRADING_PORT:-8003}:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-obscura}:${POSTGRES_PASSWORD:-obscura_secret}@postgres:5432/${POSTGRES_DB:-obscura}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-obscura_redis}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
+      
+      # Trading service URL for internal calls
+      TRADING_SERVICE_URL: ${TRADING_SERVICE_URL:-http://trading:8000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      trading:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - obscura-network
+    profiles:
+      - standalone
+      - full
+
+  # ===========================================================================
+  # Analytics Module - Standalone Deployment
+  # ===========================================================================
+  
+  analytics:
+    build:
+      context: .
+      dockerfile: modules/analytics/Dockerfile
+    container_name: obscura-analytics
+    restart: unless-stopped
+    ports:
+      - "${ANALYTICS_PORT:-8004}:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-obscura}:${POSTGRES_PASSWORD:-obscura_secret}@postgres:5432/${POSTGRES_DB:-obscura}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-obscura_redis}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - obscura-network
+    profiles:
+      - standalone
+      - full
+
+  # ===========================================================================
+  # Citadel Module - Secure Key Storage (Standalone Deployment)
+  # ===========================================================================
+  
+  citadel:
+    build:
+      context: .
+      dockerfile: modules/citadel/Dockerfile
+    container_name: obscura-citadel
+    restart: unless-stopped
+    ports:
+      - "${CITADEL_PORT:-8005}:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-obscura}:${POSTGRES_PASSWORD:-obscura_secret}@postgres:5432/${POSTGRES_DB:-obscura}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-obscura_redis}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
+      
+      # Nillion Configuration
+      NILLION_ORG_SECRET_KEY: ${NILLION_ORG_SECRET_KEY:-}
+      NILLION_SCHEMA_ID: ${NILLION_SCHEMA_ID:-}
+      NILLION_NODE_URL: ${NILLION_NODE_URL:-}
+      NILLION_APP_ID: ${NILLION_APP_ID:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - obscura-network
+    profiles:
+      - standalone
+      - full
+
+  # ===========================================================================
+  # Database Migrations
+  # ===========================================================================
+  
+  migrations:
+    build:
+      context: .
+      dockerfile: modules/api_gateway/Dockerfile
+    container_name: obscura-migrations
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-obscura}:${POSTGRES_PASSWORD:-obscura_secret}@postgres:5432/${POSTGRES_DB:-obscura}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - obscura-network
+    profiles:
+      - migrations
+
+# ===========================================================================
+# Networks
+# ===========================================================================
+
+networks:
+  obscura-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+# ===========================================================================
+# Volumes
+# ===========================================================================
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
