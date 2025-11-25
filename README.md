@@ -14,34 +14,42 @@ Obscura V2 revolutionizes social trading by solving the "transparency vs. privac
 
 ## 🏗️ Architecture
 
-The project follows a **Modular Monolith** architecture for the backend and a modern **Next.js** frontend.
+The project follows a **Modular Monolith** architecture for the backend, **Starknet-native STARK proofs** for verification, and a modern **Next.js** frontend.
 
 ```
 .
-├── backend/                # Modular Monolith (Python/FastAPI)
-│   ├── modules/            # Domain-bounded services
-│   │   ├── api_gateway/    # Unified entry point
-│   │   ├── trading/        # Multi-exchange execution (CCXT)
-│   │   ├── citadel/        # Secure storage (Nillion)
-│   │   ├── subscriptions/  # Private payments (Zcash)
-│   │   ├── copy_trading/   # Copy engine
-│   │   └── analytics/      # Performance metrics
-│   ├── shared/             # Shared kernel (DB, Config)
-│   └── docker-compose.yml  # Orchestration
+├── obscura-v2/
+│   ├── backend/                # Modular Monolith (Python/FastAPI)
+│   │   ├── modules/            # Domain-bounded services
+│   │   │   ├── api_gateway/    # Unified entry point
+│   │   │   ├── trading/        # Multi-exchange execution (CCXT)
+│   │   │   ├── citadel/        # Secure storage (Nillion)
+│   │   │   ├── subscriptions/  # Private payments (Zcash)
+│   │   │   ├── copy_trading/   # Copy engine
+│   │   │   └── analytics/      # Performance metrics
+│   │   ├── payments/           # Zcash payment engine
+│   │   └── shared/             # Shared kernel (DB, Config)
+│   │
+│   ├── verification/           # 🆕 Starknet ZK-STARK Proofs
+│   │   ├── cairo/              # Cairo 1.0 contracts & circuits
+│   │   │   ├── src/types.cairo     # Trade, Position, Report types
+│   │   │   ├── src/prover.cairo    # Off-chain proof logic
+│   │   │   └── src/verifier.cairo  # On-chain verification contract
+│   │   └── service/            # TypeScript orchestration
+│   │
+│   └── frontend/               # Next.js 14 App Router
+│       ├── app/                # Pages & Layouts
+│       ├── components/         # Shadcn/UI Components
+│       └── lib/                # Utilities & API Clients
 │
-├── frontend/               # Next.js 14 App Router
-│   ├── app/                # Pages & Layouts
-│   ├── components/         # Shadcn/UI Components
-│   └── lib/                # Utilities & API Clients
-│
-└── documentation/          # Architecture & Protocol Specs
+└── documentation/              # Architecture & Protocol Specs
 ```
 
 ## ✨ Key Features
 
 ### 🛡️ Privacy & Security
 
-- **ZK & TEE Verification**: Prove win rates and PnL without revealing trade history.
+- **Starknet ZK-STARK Proofs**: Prove win rates and PnL using Cairo circuits with **no trusted setup** and **post-quantum security**.
 - **Nillion SecretVault**: API keys for exchanges (Binance, Coinbase) are stored and used via blind compute—never exposed to the backend in plaintext.
 - **Zcash Shielded Payments**: Subscriptions are paid in ZEC using Unified Addresses, preserving financial privacy for followers.
 
@@ -61,10 +69,14 @@ The project follows a **Modular Monolith** architecture for the backend and a mo
 - **Backend**: Python 3.11, FastAPI, SQLAlchemy (Async), PostgreSQL, Redis
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Shadcn/UI
 - **Infrastructure**: Docker, Docker Compose
+- **ZK Verification (Starknet)**:
+  - **Cairo 1.0**: Smart contracts and proof circuits
+  - **Scarb**: Cairo package manager
+  - **Starknet.js**: TypeScript SDK for Starknet
 - **Web3/Privacy**:
   - **Nillion**: Secure Multi-Party Computation (MPC) for secrets.
   - **Zcash**: Shielded transactions for payments.
-  - **ZK/TEE**: Architecture for trade verification.
+  - **Starknet L2**: Native STARK proof verification.
 
 ## 🏁 Getting Started
 
@@ -79,7 +91,7 @@ The project follows a **Modular Monolith** architecture for the backend and a mo
 The backend is containerized. You can run the full stack with one command.
 
 ```bash
-cd backend
+cd obscura-v2/backend
 
 # Configure environment
 cp .env.example .env
@@ -94,10 +106,27 @@ Services will be available at:
 - **API Gateway**: `http://localhost:8000`
 - **Swagger Docs**: `http://localhost:8000/docs`
 
-### 2. Frontend Setup
+### 2. Verification Module (Starknet)
 
 ```bash
-cd frontend
+cd obscura-v2/verification/cairo
+
+# Build Cairo contracts
+scarb build
+
+# Run tests
+scarb test
+
+# Start the orchestration service
+cd ../service
+pnpm install
+pnpm dev
+```
+
+### 3. Frontend Setup
+
+```bash
+cd obscura-v2/frontend
 
 # Install dependencies
 pnpm install
@@ -116,16 +145,31 @@ Visit `http://localhost:3000` to view the application.
 **Backend**:
 
 ```bash
-cd backend
+cd obscura-v2/backend
 pytest
+```
+
+**Cairo Contracts**:
+
+```bash
+cd obscura-v2/verification/cairo
+scarb test
 ```
 
 **Frontend**:
 
 ```bash
-cd frontend
+cd obscura-v2/frontend
 pnpm test
 ```
+
+## 📚 Documentation
+
+Detailed documentation is available in the `documentation/` folder:
+- [System Architecture](documentation/04_SYSTEM_ARCHITECTURE.md)
+- [Privacy Architecture](documentation/01_PRIVACY_ARCHITECTURE_OVERVIEW.md)
+- [ZK Implementation](documentation/03_ZK_IMPLEMENTATION.md)
+- [Security Model](documentation/05_SECURITY_MODEL.md)
 
 ## 📄 License
 
