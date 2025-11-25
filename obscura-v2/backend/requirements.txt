@@ -8,13 +8,27 @@ psycopg2-binary==2.9.9
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.6
-# SDKs (Mocked or Real)
+
+# Decentralized Infrastructure SDKs
 # Nillion secret vault SDK (examples repo: https://github.com/NillionNetwork/secretvaults-py)
-secretvaults-py>=0.1.0  # install from PyPI or from the repo if not published
-# NEAR helpers / relayer interaction (if you want a Python SDK)
-near-api-py>=0.3.0
-# Zecwallet wrapper (lightweight python wrapper around zecwallet-cli)
+# secretvaults-py>=0.1.0  # install from: pip install git+https://github.com/NillionNetwork/secretvaults-py.git
+
+# NEAR chain signatures
+near-api-py>=0.2.0
+eth-account>=0.11.0  # For EVM address derivation from NEAR MPC
+eth-keys>=0.5.0
+
+# Zcash shielded payments (https://github.com/P5vc/zecwallet-python)
 zecwallet>=0.0.5
 
-# Note: If a package above is not available on PyPI, install from git or the example repo.
-# Example: pip install git+https://github.com/NillionNetwork/secretvaults-py.git
+# Trading Infrastructure
+ccxt>=4.2.0  # Unified exchange API for CEXes (Binance, Coinbase, etc.)
+web3>=6.0.0  # Ethereum/Base DEX integration (Uniswap)
+starknet-py>=0.20.0  # Starknet DEX integration
+
+# Production utilities
+python-dotenv>=1.0.0
+aiohttp>=3.9.0  # Async HTTP client
+
+# Note: If a package is not available on PyPI, install from git:
+# pip install git+https://github.com/NillionNetwork/secretvaults-py.git
