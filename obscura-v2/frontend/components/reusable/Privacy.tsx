@@ -3,7 +3,7 @@ import { SecurityFeature } from "./TraderCard";
 
 export default function Privacy() {
     return (
-        <section className="py-[60px] px-[120px] bg-white">
+        <section className="py-[60px] px-[120px] bg-background">
         <div className="max-w-[1200px] mx-auto">
           <h2 className="font-display text-[36px] leading-[120%] tracking-[-1.44px] text-[#484848] max-w-[594px] mb-10">
             The strongest privacy, security, and verifiability in trading reputation.

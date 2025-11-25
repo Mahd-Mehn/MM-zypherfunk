@@ -2,9 +2,9 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Shield, Menu, X, Sparkles, Mail, LogOut, User } from "lucide-react"
-import { useState } from "react"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { Menu, X, LogOut, User, Moon, Sun } from "lucide-react"
+import { useState, useEffect } from "react"
+import { useTheme } from "next-themes"
 import { useAuthContext } from "@/components/providers/auth-provider"
 import {
   DropdownMenu,
@@ -18,7 +18,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const { user, isAuthenticated, logout } = useAuthContext()
+  const { theme, setTheme } = useTheme()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleLogout = async () => {
     await logout()
@@ -30,78 +36,115 @@ export function Header() {
     return user.email.charAt(0).toUpperCase()
   }
 
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark")
+  }
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-lg shadow-primary/5">
+    <header className="sticky top-0 z-50 w-full border-b bg-background">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2.5 font-semibold text-lg group">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary via-primary/90 to-primary/70 shadow-lg shadow-primary/30 group-hover:shadow-xl group-hover:shadow-primary/40 transition-all">
-                <Shield className="h-5 w-5 text-primary-foreground" />
+            <Link href="/home" className="flex items-center gap-2 group">
+              <div className="w-8 h-8 relative">
+                <svg viewBox="0 0 100 100" className="w-full h-full">
+                  <path d="M50 10 L90 30 L90 70 L50 90 L10 70 L10 30 Z" fill="none" stroke="currentColor" strokeWidth="2"/>
+                  <circle cx="50" cy="50" r="15" fill="none" stroke="currentColor" strokeWidth="2"/>
+                  <path d="M50 35 L50 25 M50 65 L50 75 M35 50 L25 50 M65 50 L75 50" stroke="currentColor" strokeWidth="2"/>
+                </svg>
               </div>
-              <span className="hidden sm:inline-block bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-                Obscura
-              </span>
+              <div className="hidden sm:block">
+                <div className="text-sm font-bold text-foreground">Obscura</div>
+                <div className="text-[10px] text-muted-foreground">VERIFIABLE REPUTATION</div>
+              </div>
             </Link>
 
             <nav className="hidden md:flex items-center gap-6">
               <Link
-                href="/marketplace"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors relative group"
+                href="/home"
+                className="text-sm font-medium text-foreground hover:text-primary transition-colors"
               >
-                Marketplace
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
+                Home
+              </Link>
+              <Link
+                href="/explore"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Explore
+              </Link>
+              <Link
+                href="/live-feed"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Live Feed
               </Link>
               {isAuthenticated && (
                 <Link
-                  href="/dashboard"
-                  className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors relative group"
+                  href="/my-profile"
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Dashboard
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
+                  My Profile
                 </Link>
               )}
-              <Link
-                href="#features"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors relative group"
-              >
-                Features
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
-              </Link>
-              <Link
-                href="#how-it-works"
-                className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors relative group"
-              >
-                How It Works
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
-              </Link>
             </nav>
           </div>
 
           <div className="flex items-center gap-3">
-            <ThemeToggle />
+            {mounted && (
+              <button 
+                onClick={toggleTheme}
+                className="p-2 hover:bg-accent rounded-lg transition-colors"
+                aria-label="Toggle theme"
+              >
+                {theme === "dark" ? (
+                  <Sun className="w-5 h-5 text-foreground" />
+                ) : (
+                  <Moon className="w-5 h-5 text-foreground" />
+                )}
+              </button>
+            )}
+            <button className="p-2 hover:bg-accent rounded-lg transition-colors">
+              <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+              </svg>
+            </button>
+            <button className="p-2 hover:bg-accent rounded-lg transition-colors relative">
+              <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </button>
             <div className="hidden md:flex items-center gap-3">
               {isAuthenticated ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                      <Avatar className="h-9 w-9">
-                        <AvatarFallback className="bg-primary text-primary-foreground">
+                    <button className="flex items-center gap-2 hover:bg-accent rounded-lg px-3 py-2 transition-colors">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-muted">
                           {getUserInitials()}
                         </AvatarFallback>
                       </Avatar>
-                    </Button>
+                      <span className="text-sm font-medium text-foreground">Octavian.mx</span>
+                      <svg className="w-4 h-4 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">My Account</p>
+                        <p className="text-sm font-medium leading-none text-foreground">Octavian.mx</p>
                         <p className="text-xs leading-none text-muted-foreground truncate">
                           {user?.email}
                         </p>
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/my-profile" className="cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        My Profile
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard" className="cursor-pointer">
                         <User className="mr-2 h-4 w-4" />
@@ -117,15 +160,13 @@ export function Header() {
                 </DropdownMenu>
               ) : (
                 <>
-                  <Button variant="ghost" size="sm" asChild className="hover:bg-primary/10 hover:text-primary">
+                  <Button variant="outline" size="sm" asChild>
                     <Link href="/auth/login">
-                      <Mail className="h-4 w-4" />
                       Sign In
                     </Link>
                   </Button>
-                  <Button size="sm" asChild className="shadow-lg shadow-primary/25">
+                  <Button size="sm" asChild className="bg-primary hover:bg-primary/90 text-black">
                     <Link href="/auth/login">
-                      <Sparkles className="h-4 w-4" />
                       Get Started
                     </Link>
                   </Button>
@@ -133,44 +174,44 @@ export function Header() {
               )}
             </div>
 
-            <button className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Toggle menu">
+            <button className="md:hidden text-foreground" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label="Toggle menu">
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
 
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-border/40 py-4 space-y-3">
+          <div className="md:hidden border-t py-4 space-y-3">
             <Link
-              href="/marketplace"
+              href="/home"
+              className="block py-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Home
+            </Link>
+            <Link
+              href="/explore"
               className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Marketplace
+              Explore
+            </Link>
+            <Link
+              href="/live-feed"
+              className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Live Feed
             </Link>
             {isAuthenticated && (
               <Link
-                href="/dashboard"
+                href="/my-profile"
                 className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Dashboard
+                My Profile
               </Link>
             )}
-            <Link
-              href="#features"
-              className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Features
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="block py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              How It Works
-            </Link>
             <div className="flex flex-col gap-2 pt-2">
               {isAuthenticated ? (
                 <>
@@ -186,13 +227,11 @@ export function Header() {
                 <>
                   <Button variant="outline" size="sm" asChild className="w-full bg-transparent">
                     <Link href="/auth/login">
-                      <Mail className="h-4 w-4" />
                       Sign In
                     </Link>
                   </Button>
-                  <Button size="sm" asChild className="w-full">
+                  <Button size="sm" asChild className="w-full bg-primary text-black">
                     <Link href="/auth/login">
-                      <Sparkles className="h-4 w-4" />
                       Get Started
                     </Link>
                   </Button>

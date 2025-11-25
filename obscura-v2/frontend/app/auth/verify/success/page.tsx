@@ -1,9 +1,10 @@
 "use client"
 
-import { MagicLinkForm } from "@/components/auth/magic-link-form"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { ArrowRight } from "lucide-react"
 
-export default function LoginPage() {
+export default function MagicLinkSentPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50">
       <div className="w-full max-w-md px-6">
@@ -26,29 +27,26 @@ export default function LoginPage() {
 
         {/* Main Content */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">Get Started</h1>
+          <h1 className="text-3xl font-bold mb-2">Magic Link Sent</h1>
           <p className="text-sm text-muted-foreground mb-1">
-            We'll send you a magic link to get started.
+            Check your inbox.
           </p>
           <p className="text-sm text-muted-foreground">
-            No passwords, no KYC.
+            The link expires in <span className="text-primary font-medium">15</span> minutes.
           </p>
         </div>
 
-        {/* Form */}
-        <MagicLinkForm />
+        {/* Resend Button */}
+        <Button 
+          className="w-full h-12 bg-primary hover:bg-primary/90 text-black font-medium rounded-full mb-6"
+        >
+          Resend Link
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
 
-        {/* Terms */}
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          By continuing you agree to our{" "}
-          <Link href="/terms" className="text-primary hover:underline">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" className="text-primary hover:underline">
-            Privacy Policy
-          </Link>
-          . We use a secure passwordless login.
+        {/* Help Text */}
+        <p className="text-center text-sm text-muted-foreground">
+          Haven't received it? Check spam or try again.
         </p>
       </div>
     </div>

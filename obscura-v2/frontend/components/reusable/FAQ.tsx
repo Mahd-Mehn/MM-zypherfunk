@@ -6,7 +6,7 @@ export default function FAQ() {
     const [openFaq, setOpenFaq] = useState<number | null>(null);
     
     return(
-        <section id="faqs" className="py-[60px] px-[120px] bg-white">
+        <section id="faqs" className="py-[60px] px-[120px] bg-background">
         <div className="max-w-[894px] mx-auto">
           <div className="flex flex-col items-center gap-4 mb-10">
             <div className="px-2.5 py-2 bg-brand-cyan/10 rounded-full">

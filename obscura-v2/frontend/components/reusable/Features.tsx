@@ -9,7 +9,7 @@ import gif6 from "@/public/asets/6.gif";
 
 export default function Features() {
     return(
-        <section id="features" className="py-[60px] bg-white">
+        <section id="features" className="py-[60px] bg-background">
                 <div className="max-w-[1200px] mx-auto flex flex-col items-center gap-16">
                   <div className="flex flex-col items-center gap-4">
                     <div className="px-2.5 py-2 bg-brand-cyan/10 rounded-full">

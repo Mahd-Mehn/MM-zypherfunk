@@ -25,7 +25,7 @@ function ExchangeLogo({ logo, name }: { logo: string; name: string }) {
 
 export default function Ecosystem() {
     return (
-        <section className="py-[60px] bg-white">
+        <section className="py-[60px] bg-background">
         <div className="max-w-[1200px] mx-auto flex flex-col items-center gap-10">
           <div className="flex flex-col items-center gap-4">
             <h2 className="font-display text-[36px] leading-[120%] tracking-[-1.44px] text-[#1A1A1A] text-center">

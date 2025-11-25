@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Loader2, Mail, CheckCircle2, AlertCircle, ExternalLink } from "lucide-react"
+import { Loader2, Mail, CheckCircle2, AlertCircle, ExternalLink, ArrowRight } from "lucide-react"
 import { APIError } from "@/lib/api"
 import Link from "next/link"
 
@@ -57,15 +57,15 @@ export function MagicLinkForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">Email Address</Label>
         <Input
           id="email"
           type="email"
-          placeholder="you@example.com"
+          placeholder="Enter email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
           disabled={loading}
+          className="h-12 px-4 border-cyan-200 focus:border-primary focus:ring-primary"
         />
       </div>
 
@@ -94,7 +94,11 @@ export function MagicLinkForm() {
         </Alert>
       ) : null}
 
-      <Button type="submit" className="w-full" disabled={loading}>
+      <Button 
+        type="submit" 
+        className="w-full h-12 bg-primary hover:bg-primary/90 text-black font-medium rounded-full"
+        disabled={loading}
+      >
         {loading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -102,15 +106,11 @@ export function MagicLinkForm() {
           </>
         ) : (
           <>
-            <Mail className="mr-2 h-4 w-4" />
             Send Magic Link
+            <ArrowRight className="ml-2 h-4 w-4" />
           </>
         )}
       </Button>
-
-      <p className="text-xs text-center text-muted-foreground">
-        We'll create an account if you don't have one yet
-      </p>
     </form>
   )
 }
