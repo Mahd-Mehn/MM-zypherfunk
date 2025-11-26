@@ -419,6 +419,70 @@ class NillionClient:
             if metadata.owner == owner
         ]
 
+    async def list_secrets_by_owner(self, owner: str = "default") -> List[Dict[str, Any]]:
+        """List all secrets owned by a user as dictionaries (for API responses)"""
+        if self.network:
+            # SDK implementation would query Nillion network
+            try:
+                vault = SecretVault(self.network)
+                result = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: vault.list(owner=owner)
+                )
+                return result if isinstance(result, list) else []
+            except Exception as e:
+                logger.error(f"Failed to list secrets: {e}")
+                return []
+        
+        # Mock implementation
+        return [
+            metadata.to_dict() for metadata in self._mock_metadata.values()
+            if metadata.owner == owner
+        ]
+
+    async def delete_secret(self, store_id: str, owner: str = "default") -> bool:
+        """
+        Delete a secret from Nillion network.
+        
+        Args:
+            store_id: Unique identifier of the secret
+            owner: User requesting deletion (must be owner)
+            
+        Returns:
+            True if deleted, False otherwise
+        """
+        await self._check_circuit_breaker()
+        
+        if self.network:
+            try:
+                vault = SecretVault(self.network)
+                await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: vault.delete(store_id)
+                )
+                self._failure_count = 0
+                logger.info(f"Deleted secret {store_id} from Nillion")
+                return True
+            except Exception as e:
+                await self._handle_failure(e)
+                logger.error(f"Failed to delete secret: {e}")
+                return False
+        
+        # Mock path - check ownership
+        if store_id in self._mock_metadata:
+            metadata = self._mock_metadata[store_id]
+            if metadata.owner == owner:
+                del self._mock_metadata[store_id]
+                if store_id in self._mock_store:
+                    del self._mock_store[store_id]
+                logger.info(f"[MOCK] Deleted secret {store_id}")
+                return True
+            else:
+                logger.warning(f"[MOCK] Cannot delete {store_id} - not owner")
+                return False
+        
+        return False
+
     async def rotate_secret(
         self,
         store_id: str,

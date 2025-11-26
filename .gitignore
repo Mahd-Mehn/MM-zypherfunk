@@ -1,4 +1,4 @@
-# legacy/
+legacy/
 documentation/
 venv/
 # Python
@@ -247,3 +247,16 @@ next-env.d.ts
 # home/
 figma/
 obscura-v2/backend/PROJECT_STATUS.mdq
+
+# Verification directory artifacts
+# Cairo build artifacts
+obscura-v2/verification/cairo/target/
+obscura-v2/verification/cairo/Scarb.lock
+
+# Verification service artifacts
+obscura-v2/verification/service/node_modules/
+obscura-v2/verification/service/bun.lock
+obscura-v2/verification/service/package-lock.json
+obscura-v2/verification/service/.env
+obscura-v2/verification/service/dist/
+obscura-v2/verification/service/build/

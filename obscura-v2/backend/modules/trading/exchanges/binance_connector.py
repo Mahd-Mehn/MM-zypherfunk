@@ -38,6 +38,10 @@ class BinanceConnector(ExchangeConnector):
         self.api_key = api_key or os.getenv("BINANCE_API_KEY")
         self.api_secret = api_secret or os.getenv("BINANCE_API_SECRET")
         self.testnet = os.getenv("BINANCE_TESTNET", "false").lower() == "true"
+        
+        # Demo trading mode (recommended for 2025+, uses demo-api.binance.com)
+        # Set BINANCE_USE_DEMO=true to use demo trading instead of old testnet
+        self.use_demo = os.getenv("BINANCE_USE_DEMO", "true").lower() == "true"
     
     async def initialize(self) -> bool:
         """Initialize Binance client"""
@@ -46,22 +50,32 @@ class BinanceConnector(ExchangeConnector):
             return False
         
         try:
-            self.client = ccxt.binance({
+            config = {
                 'apiKey': self.api_key,
                 'secret': self.api_secret,
                 'enableRateLimit': True,
                 'options': {
                     'defaultType': 'spot',
                 }
-            })
+            }
             
+            self.client = ccxt.binance(config)
+            
+            # Apply testnet/demo configuration
             if self.testnet:
-                self.client.set_sandbox_mode(True)
+                if self.use_demo:
+                    # Use demo trading (demo-api.binance.com) - recommended for 2025+
+                    self.client.enable_demo_trading(True)
+                    print("Using Binance Demo Trading (demo-api.binance.com)")
+                else:
+                    # Use old sandbox/testnet (testnet.binance.vision) - deprecated
+                    self.client.set_sandbox_mode(True)
+                    print("Using Binance Testnet (testnet.binance.vision)")
             
             # Test connection
             await self.client.load_markets()
             self._initialized = True
-            print(f"Binance connector initialized (testnet={self.testnet})")
+            print(f"Binance connector initialized (testnet={self.testnet}, demo={self.use_demo})")
             return True
             
         except Exception as e:
@@ -229,3 +243,98 @@ class BinanceConnector(ExchangeConnector):
     def format_symbol(self, base: str, quote: str) -> str:
         """Format symbol for Binance (e.g., BTC/USDT)"""
         return f"{base}/{quote}"
+
+    async def fetch_my_trades(
+        self, 
+        symbol: Optional[str] = None, 
+        since: Optional[int] = None,
+        limit: int = 100
+    ) -> List[dict]:
+        """
+        Fetch user's trade history from Binance.
+        
+        Args:
+            symbol: Trading pair (e.g., 'BTC/USDT'). If None, fetches for common pairs.
+            since: Unix timestamp in milliseconds to fetch trades from
+            limit: Maximum number of trades per symbol
+            
+        Returns:
+            List of trade dictionaries in CCXT format
+        """
+        if not self.client:
+            await self.initialize()
+        
+        if not self.client:
+            raise RuntimeError("Client not initialized")
+        
+        all_trades = []
+        
+        try:
+            if symbol:
+                # Fetch trades for specific symbol
+                trades = await self.client.fetch_my_trades(symbol, since=since, limit=limit)
+                all_trades.extend(trades)
+            else:
+                # Get balance to determine which pairs to check
+                balance = await self.client.fetch_balance()
+                assets = [k for k, v in balance['total'].items() if v > 0 and k != 'USDT']
+                
+                # Fetch trades for each asset paired with USDT
+                for asset in assets[:10]:  # Limit to 10 assets
+                    pair = f"{asset}/USDT"
+                    try:
+                        trades = await self.client.fetch_my_trades(pair, since=since, limit=limit)
+                        all_trades.extend(trades)
+                    except Exception:
+                        # Pair might not exist, skip
+                        pass
+            
+            # Sort by timestamp
+            all_trades.sort(key=lambda x: x.get('timestamp', 0))
+            return all_trades
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to fetch trades from Binance: {e}")
+
+    async def fetch_closed_orders(
+        self,
+        symbol: Optional[str] = None,
+        since: Optional[int] = None,
+        limit: int = 100
+    ) -> List[dict]:
+        """
+        Fetch user's closed/filled orders from Binance.
+        
+        Args:
+            symbol: Trading pair (e.g., 'BTC/USDT')
+            since: Unix timestamp in milliseconds
+            limit: Maximum number of orders
+            
+        Returns:
+            List of order dictionaries
+        """
+        if not self.client:
+            await self.initialize()
+        
+        if not self.client:
+            raise RuntimeError("Client not initialized")
+        
+        try:
+            if symbol:
+                return await self.client.fetch_closed_orders(symbol, since=since, limit=limit)
+            else:
+                # Fetch for common trading pairs
+                all_orders = []
+                common_pairs = ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT']
+                
+                for pair in common_pairs:
+                    try:
+                        orders = await self.client.fetch_closed_orders(pair, since=since, limit=limit)
+                        all_orders.extend(orders)
+                    except Exception:
+                        pass
+                
+                return all_orders
+                
+        except Exception as e:
+            raise RuntimeError(f"Failed to fetch orders from Binance: {e}")

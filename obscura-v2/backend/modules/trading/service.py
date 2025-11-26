@@ -10,7 +10,7 @@ import os
 import logging
 from typing import Dict, Any, List, Optional
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import FastAPI, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
@@ -20,6 +20,7 @@ from .key_storage import SecureKeyStorage, ExchangeProvider
 from .exchanges.orchestrator import TradingOrchestrator
 from .exchanges.universal_connector import list_supported_exchanges
 from .exchanges.base import TradeOrder, OrderType, OrderSide
+from .pnl_calculator import PnLCalculator, ReputationScore, ClosedTrade
 
 logger = logging.getLogger("obscura.trading")
 
@@ -33,6 +34,7 @@ app = FastAPI(
 # Service instances
 key_storage = SecureKeyStorage()
 orchestrator = TradingOrchestrator()
+pnl_calculator = PnLCalculator()
 
 
 # =====================
@@ -65,6 +67,38 @@ class TradeResponse(BaseModel):
     filled_amount: float
     average_price: Optional[float]
     exchange: str
+
+
+class ClosedTradeResponse(BaseModel):
+    """Response model for a closed trade"""
+    symbol: str
+    entry_date: str
+    exit_date: str
+    duration_hours: float
+    side: str
+    quantity: float
+    entry_price: float
+    exit_price: float
+    gross_pnl: float
+    fee: float
+    net_pnl: float
+    roi_percentage: float
+
+
+class PerformanceResponse(BaseModel):
+    """Response model for trading performance metrics"""
+    user_id: str
+    total_trades: int
+    winning_trades: int
+    losing_trades: int
+    win_rate: float
+    total_pnl_usd: float
+    profit_factor: float
+    average_roi: float
+    reputation_score: float
+    generated_at: str
+    closed_trades: List[ClosedTradeResponse]
+    open_positions: Dict[str, Any]
 
 
 # =====================
@@ -207,6 +241,232 @@ async def get_balance(asset: Optional[str] = None):
     """Get aggregated balance"""
     balance = await orchestrator.get_aggregated_balance(asset)
     return balance
+
+
+# =====================
+# Performance & Analytics
+# =====================
+
+@app.get("/performance/{user_id}", response_model=PerformanceResponse)
+async def get_user_performance(
+    user_id: str,
+    exchange: Optional[str] = Query(None, description="Specific exchange or 'all'"),
+    symbol: Optional[str] = Query(None, description="Specific trading pair"),
+    days: int = Query(30, description="Number of days to analyze", ge=1, le=365)
+):
+    """
+    Calculate PnL and reputation score for a user's trades.
+    
+    Returns:
+    - Total trades, win rate, profit factor
+    - Total PnL in USD
+    - Average ROI per trade
+    - Reputation score (0-100)
+    - List of closed positions
+    - Open positions
+    """
+    try:
+        # Calculate 'since' timestamp
+        since_dt = datetime.utcnow() - timedelta(days=days)
+        since_ms = int(since_dt.timestamp() * 1000)
+        
+        # Fetch trades from exchange(s)
+        trades_by_exchange = await orchestrator.fetch_user_trades(
+            exchange_name=exchange,
+            symbol=symbol,
+            since=since_ms,
+            limit=500  # Fetch more for accurate PnL calculation
+        )
+        
+        # Flatten all trades
+        all_trades = []
+        for ex_name, trades in trades_by_exchange.items():
+            for trade in trades:
+                trade['_exchange'] = ex_name  # Tag with exchange name
+                all_trades.append(trade)
+        
+        if not all_trades:
+            return PerformanceResponse(
+                user_id=user_id,
+                total_trades=0,
+                winning_trades=0,
+                losing_trades=0,
+                win_rate=0.0,
+                total_pnl_usd=0.0,
+                profit_factor=0.0,
+                average_roi=0.0,
+                reputation_score=0.0,
+                generated_at=datetime.utcnow().isoformat(),
+                closed_trades=[],
+                open_positions={}
+            )
+        
+        # Calculate performance using PnL calculator
+        reputation_score, closed_trades = pnl_calculator.calculate_from_ccxt_trades(
+            all_trades, 
+            trader_id=user_id
+        )
+        
+        # Get open positions
+        open_positions = {}
+        for symbol, lots in pnl_calculator.get_open_positions().items():
+            if lots:
+                total_qty = sum(float(lot['quantity']) for lot in lots)
+                avg_price = sum(float(lot['price']) * float(lot['quantity']) for lot in lots) / total_qty if total_qty > 0 else 0
+                side = lots[0]['side']
+                open_positions[symbol] = {
+                    'side': side,
+                    'quantity': total_qty,
+                    'avg_entry_price': avg_price,
+                    'lots': len(lots)
+                }
+        
+        # Convert closed trades to response format
+        closed_trades_response = [
+            ClosedTradeResponse(
+                symbol=ct.symbol,
+                entry_date=ct.entry_date.isoformat(),
+                exit_date=ct.exit_date.isoformat(),
+                duration_hours=ct.duration_seconds / 3600,
+                side=ct.side,
+                quantity=float(ct.quantity),
+                entry_price=float(ct.entry_price),
+                exit_price=float(ct.exit_price),
+                gross_pnl=float(ct.gross_pnl),
+                fee=float(ct.fee),
+                net_pnl=float(ct.net_pnl),
+                roi_percentage=ct.roi_percentage
+            )
+            for ct in closed_trades[-50:]  # Last 50 closed trades
+        ]
+        
+        return PerformanceResponse(
+            user_id=user_id,
+            total_trades=reputation_score.total_trades,
+            winning_trades=reputation_score.winning_trades,
+            losing_trades=reputation_score.losing_trades,
+            win_rate=reputation_score.win_rate,
+            total_pnl_usd=float(reputation_score.total_pnl_usd),
+            profit_factor=reputation_score.profit_factor if reputation_score.profit_factor != float('inf') else 999.99,
+            average_roi=reputation_score.average_roi,
+            reputation_score=reputation_score.score,
+            generated_at=reputation_score.generated_at.isoformat(),
+            closed_trades=closed_trades_response,
+            open_positions=open_positions
+        )
+        
+    except Exception as e:
+        logger.error(f"Failed to calculate performance for {user_id}: {e}")
+        raise HTTPException(500, f"Failed to calculate performance: {str(e)}")
+
+
+@app.get("/performance/{user_id}/summary")
+async def get_performance_summary(
+    user_id: str,
+    exchange: Optional[str] = Query(None),
+    days: int = Query(30, ge=1, le=365)
+):
+    """
+    Get a simplified performance summary (no trade details).
+    Useful for quick reputation display.
+    """
+    try:
+        since_dt = datetime.utcnow() - timedelta(days=days)
+        since_ms = int(since_dt.timestamp() * 1000)
+        
+        trades_by_exchange = await orchestrator.fetch_user_trades(
+            exchange_name=exchange,
+            since=since_ms,
+            limit=500
+        )
+        
+        all_trades = []
+        for trades in trades_by_exchange.values():
+            all_trades.extend(trades)
+        
+        if not all_trades:
+            return {
+                "user_id": user_id,
+                "reputation_score": 0,
+                "total_trades": 0,
+                "win_rate": 0,
+                "total_pnl_usd": 0,
+                "status": "no_trades"
+            }
+        
+        score, _ = pnl_calculator.calculate_from_ccxt_trades(all_trades, user_id)
+        
+        return {
+            "user_id": user_id,
+            "reputation_score": score.score,
+            "total_trades": score.total_trades,
+            "win_rate": round(score.win_rate, 2),
+            "total_pnl_usd": round(float(score.total_pnl_usd), 2),
+            "profit_factor": round(score.profit_factor, 2) if score.profit_factor != float('inf') else "∞",
+            "average_roi": round(score.average_roi, 2),
+            "status": "calculated",
+            "period_days": days
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get summary for {user_id}: {e}")
+        raise HTTPException(500, f"Failed to calculate summary: {str(e)}")
+
+
+@app.get("/trades/{user_id}")
+async def get_user_trades(
+    user_id: str,
+    exchange: Optional[str] = Query(None),
+    symbol: Optional[str] = Query(None),
+    days: int = Query(7, ge=1, le=90),
+    limit: int = Query(100, ge=1, le=500)
+):
+    """
+    Fetch raw trade history for a user.
+    Returns trades in CCXT format.
+    """
+    try:
+        since_dt = datetime.utcnow() - timedelta(days=days)
+        since_ms = int(since_dt.timestamp() * 1000)
+        
+        trades_by_exchange = await orchestrator.fetch_user_trades(
+            exchange_name=exchange,
+            symbol=symbol,
+            since=since_ms,
+            limit=limit
+        )
+        
+        # Format response
+        formatted = {}
+        total_count = 0
+        
+        for ex_name, trades in trades_by_exchange.items():
+            formatted[ex_name] = [
+                {
+                    "id": t.get('id'),
+                    "timestamp": t.get('timestamp'),
+                    "datetime": t.get('datetime'),
+                    "symbol": t.get('symbol'),
+                    "side": t.get('side'),
+                    "amount": t.get('amount'),
+                    "price": t.get('price'),
+                    "cost": t.get('cost'),
+                    "fee": t.get('fee', {}).get('cost', 0)
+                }
+                for t in trades
+            ]
+            total_count += len(trades)
+        
+        return {
+            "user_id": user_id,
+            "total_trades": total_count,
+            "period_days": days,
+            "trades_by_exchange": formatted
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to fetch trades for {user_id}: {e}")
+        raise HTTPException(500, f"Failed to fetch trades: {str(e)}")
 
 
 # =====================

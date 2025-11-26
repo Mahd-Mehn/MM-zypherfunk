@@ -63,10 +63,17 @@ class Settings(BaseSettings):
     MAX_COPY_DELAY_MS: int = 1000
     DEFAULT_SLIPPAGE: float = 0.02
     
+    # Binance Trading Environment
+    # NOTE: API keys are NOT stored here - they are encrypted via Nillion/Citadel
+    # Users submit keys via POST /citadel/secrets/store which encrypts them
+    BINANCE_TESTNET: bool = False
+    BINANCE_USE_DEMO: bool = True
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = True
+        extra = "ignore"  # Ignore extra env vars not defined in Settings
 
 
 @lru_cache()

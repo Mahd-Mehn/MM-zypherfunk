@@ -58,12 +58,23 @@ The Starknet contract:
 3. Stores verified performance reports
 4. Emits events for off-chain indexing
 
+## Deployed Contract (Starknet Sepolia)
+
+| Property | Value |
+|----------|-------|
+| **Contract Address** | `0x0100dc8bce9ff7f15f481a9350e90744c31b4112613efa06adabf0341e08993f` |
+| **Class Hash** | `0x191aad8debf4ed4e2b25a8864c4ad6f22aab004e2e4164349ea4dcc488c3f37` |
+| **Network** | Starknet Sepolia Testnet |
+| **Owner** | `0x0442b94543f5f4a79161c0c661741407f931492e01a067fdd7337d2f135cd29d` |
+
+View on explorer: [Starkscan](https://sepolia.starkscan.co/contract/0x0100dc8bce9ff7f15f481a9350e90744c31b4112613efa06adabf0341e08993f)
+
 ## Quick Start
 
 ### Prerequisites
-- [Scarb](https://docs.swmansion.com/scarb/) (Cairo package manager)
-- [Starkli](https://book.starkli.rs/) (Starknet CLI)
-- Node.js 18+
+- [Scarb 2.8.4](https://docs.swmansion.com/scarb/) (Cairo package manager)
+- [Starknet Foundry (sncast)](https://foundry-rs.github.io/starknet-foundry/) (Deployment tool)
+- Node.js 18+ / Bun
 
 ### 1. Build Cairo Contracts
 
@@ -78,26 +89,209 @@ scarb build
 scarb test
 ```
 
-### 3. Deploy to Starknet (Testnet)
-
-```bash
-# Set up account
-starkli account fetch <YOUR_ADDRESS> --output account.json
-
-# Declare contract class
-starkli declare target/dev/obscura_verifier.contract_class.json
-
-# Deploy contract
-starkli deploy <CLASS_HASH> --account account.json
-```
-
-### 4. Start Service
+### 3. Start Service
 
 ```bash
 cd service
-pnpm install
-pnpm dev
+bun install
+bun dev
 ```
+
+---
+
+## Full Setup Guide (macOS)
+
+This section documents the complete setup process for the Cairo development environment and contract deployment.
+
+### Step 1: Install Scarb (Cairo Package Manager)
+
+```bash
+# Install specific version (2.8.4 recommended for Starknet Sepolia compatibility)
+curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -v 2.8.4
+
+# Verify installation
+scarb --version
+# Expected: scarb 2.8.4
+
+# Check Cairo version
+scarb cairo-run --version
+# Expected: cairo-run 2.8.4
+```
+
+> **Note**: Version compatibility is critical. Starknet Sepolia expects specific CASM compiler versions. Using Scarb 2.8.4 with `starknet = "2.8.4"` in Scarb.toml ensures compatibility.
+
+### Step 2: Install Starknet Foundry (sncast)
+
+We recommend `sncast` over `starkli` for deployment due to better RPC compatibility:
+
+```bash
+# Install Starknet Foundry
+curl -L https://raw.githubusercontent.com/foundry-rs/starknet-foundry/master/scripts/install.sh | sh
+
+# Run the installer
+snfoundryup
+
+# Verify installation
+sncast --version
+# Expected: sncast 0.53.0 or later
+```
+
+### Step 3: Create Starknet Wallet & Account
+
+```bash
+# Create wallet directory
+mkdir -p ~/.starkli-wallets/deployer
+
+# Generate keystore (saves encrypted private key)
+starkli signer keystore new ~/.starkli-wallets/deployer/keystore.json
+# Enter a password when prompted - SAVE THIS PASSWORD!
+# This outputs your public key
+
+# Fund your wallet on Sepolia
+# 1. Go to https://starknet-faucet.vercel.app/
+# 2. Use the public key address to receive test ETH
+
+# Initialize account (Argent X or Braavos style)
+starkli account oz init \
+  --keystore ~/.starkli-wallets/deployer/keystore.json \
+  ~/.starkli-wallets/deployer/account.json
+
+# Deploy the account contract (requires funded wallet)
+starkli account deploy \
+  --keystore ~/.starkli-wallets/deployer/keystore.json \
+  ~/.starkli-wallets/deployer/account.json
+```
+
+### Step 4: Configure Starknet Foundry
+
+Create `snfoundry.toml` in your Cairo project root:
+
+```toml
+[sncast.deployer]
+account = "deployer"
+accounts-file = "/Users/<YOUR_USER>/.starkli-wallets/deployer/account.json"
+keystore = "/Users/<YOUR_USER>/.starkli-wallets/deployer/keystore.json"
+```
+
+### Step 5: Build the Contract
+
+```bash
+cd obscura-v2/verification/cairo
+
+# Build Sierra and CASM artifacts
+scarb build
+
+# Verify build outputs
+ls target/dev/
+# Should show: obscura_ObscuraVerifier.contract_class.json (Sierra)
+#              obscura_ObscuraVerifier.compiled_contract_class.json (CASM)
+```
+
+### Step 6: Declare the Contract Class
+
+```bash
+# Declare using sncast (recommended)
+sncast declare \
+  --contract-name ObscuraVerifier \
+  --network sepolia
+
+# This outputs:
+# - class_hash: The unique identifier for your contract class
+# - transaction_hash: The declaration transaction
+
+# Example output:
+# class_hash: 0x191aad8debf4ed4e2b25a8864c4ad6f22aab004e2e4164349ea4dcc488c3f37
+```
+
+### Step 7: Deploy the Contract Instance
+
+```bash
+# Deploy with constructor arguments
+# The ObscuraVerifier constructor takes an owner address (felt252)
+sncast --account deployer deploy \
+  --class-hash 0x191aad8debf4ed4e2b25a8864c4ad6f22aab004e2e4164349ea4dcc488c3f37 \
+  --arguments '0x0442b94543f5f4a79161c0c661741407f931492e01a067fdd7337d2f135cd29d' \
+  --network sepolia
+
+# Example output:
+# contract_address: 0x0100dc8bce9ff7f15f481a9350e90744c31b4112613efa06adabf0341e08993f
+# transaction_hash: 0x07bf28165bf8fe9e38b6f77abdbb87d3914249999a3cfc49940584c1f157b605
+```
+
+### Step 8: Verify Deployment
+
+```bash
+# Call a read function to verify the contract is working
+sncast call \
+  --contract-address 0x0100dc8bce9ff7f15f481a9350e90744c31b4112613efa06adabf0341e08993f \
+  --function get_report_count \
+  --network sepolia
+
+# Expected output: response: [0x0] (no reports submitted yet)
+```
+
+---
+
+## Interacting with the Contract
+
+### Read Functions (Free)
+
+```bash
+# Get total report count
+sncast call \
+  --contract-address 0x0100dc8bce9ff7f15f481a9350e90744c31b4112613efa06adabf0341e08993f \
+  --function get_report_count \
+  --network sepolia
+
+# Get trader stats
+sncast call \
+  --contract-address 0x0100dc8bce9ff7f15f481a9350e90744c31b4112613efa06adabf0341e08993f \
+  --function get_trader_stats \
+  --calldata 0x<TRADER_ADDRESS> \
+  --network sepolia
+```
+
+### Write Functions (Requires Gas)
+
+```bash
+# Register as a trader
+sncast --account deployer invoke \
+  --contract-address 0x0100dc8bce9ff7f15f481a9350e90744c31b4112613efa06adabf0341e08993f \
+  --function register_trader \
+  --network sepolia
+
+# Submit a verified report (typically called by the orchestration service)
+sncast --account deployer invoke \
+  --contract-address 0x0100dc8bce9ff7f15f481a9350e90744c31b4112613efa06adabf0341e08993f \
+  --function submit_report \
+  --calldata <report_hash> <trader_address> <timestamp_start> <timestamp_end> <total_pnl_mag> <total_pnl_sign> <trade_count> <win_count> <total_volume_mag> <total_volume_sign> \
+  --network sepolia
+```
+
+---
+
+## Troubleshooting
+
+### CASM Compiler Version Mismatch
+
+If you see errors like `contract class hash mismatch` or `compiled_class_hash did not match`:
+
+1. Check Scarb version matches `starknet` version in `Scarb.toml`
+2. Use `--network sepolia` flag instead of explicit RPC URLs
+3. Rebuild with `scarb clean && scarb build`
+
+### RPC Version Incompatibility
+
+Some RPC providers (like Alchemy) may use older spec versions. Solutions:
+- Use `--network sepolia` flag which uses sncast's built-in RPC
+- Or use a compatible RPC like `https://starknet-sepolia.public.blastapi.io`
+
+### Account Not Found
+
+If sncast can't find your account:
+1. Verify paths in `snfoundry.toml` are absolute
+2. Check account file exists: `cat ~/.starkli-wallets/deployer/account.json`
+3. Ensure account is deployed on Sepolia (not just initialized)
 
 ## Data Flow
 

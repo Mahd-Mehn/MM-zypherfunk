@@ -119,6 +119,26 @@ class ExchangeConnector(ABC):
         """Get list of supported trading pairs"""
         pass
     
+    async def fetch_my_trades(
+        self, 
+        symbol: Optional[str] = None, 
+        since: Optional[int] = None,
+        limit: int = 100
+    ) -> List[dict]:
+        """
+        Fetch user's trade history.
+        Override in subclass for exchange-specific implementation.
+        
+        Args:
+            symbol: Trading pair (e.g., 'BTC/USDT')
+            since: Unix timestamp in milliseconds
+            limit: Maximum number of trades
+            
+        Returns:
+            List of trade dictionaries in CCXT format
+        """
+        raise NotImplementedError(f"{self.name} does not support fetch_my_trades")
+    
     def format_symbol(self, base: str, quote: str) -> str:
         """Format symbol for this exchange"""
         return f"{base}/{quote}"

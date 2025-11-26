@@ -302,3 +302,57 @@ class TradingOrchestrator:
                 results.append(result)
         
         return results
+
+    async def fetch_user_trades(
+        self,
+        exchange_name: Optional[str] = None,
+        symbol: Optional[str] = None,
+        since: Optional[int] = None,
+        limit: int = 100
+    ) -> Dict[str, List[dict]]:
+        """
+        Fetch user's trade history from one or all exchanges.
+        
+        Args:
+            exchange_name: Specific exchange to fetch from (None = all)
+            symbol: Trading pair (e.g., 'BTC/USDT')
+            since: Unix timestamp in milliseconds
+            limit: Maximum trades per exchange/symbol
+            
+        Returns:
+            Dict mapping exchange name to list of trades
+        """
+        all_trades = {}
+        
+        if exchange_name:
+            # Fetch from specific exchange
+            if exchange_name not in self.exchanges:
+                raise ValueError(f"Exchange {exchange_name} not configured")
+            
+            exchange = self.exchanges[exchange_name]
+            try:
+                trades = await exchange.fetch_my_trades(symbol, since, limit)
+                all_trades[exchange_name] = trades
+            except NotImplementedError:
+                all_trades[exchange_name] = []
+            except Exception as e:
+                print(f"Failed to fetch trades from {exchange_name}: {e}")
+                all_trades[exchange_name] = []
+        else:
+            # Fetch from all initialized exchanges
+            for name, exchange in self.exchanges.items():
+                if name in self.initialized_exchanges:
+                    try:
+                        trades = await exchange.fetch_my_trades(symbol, since, limit)
+                        all_trades[name] = trades
+                    except NotImplementedError:
+                        all_trades[name] = []
+                    except Exception as e:
+                        print(f"Failed to fetch trades from {name}: {e}")
+                        all_trades[name] = []
+        
+        return all_trades
+
+    def get_initialized_exchanges(self) -> List[str]:
+        """Get list of initialized exchange names"""
+        return self.initialized_exchanges.copy()

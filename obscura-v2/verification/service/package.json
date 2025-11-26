@@ -13,22 +13,23 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "starknet": "^6.11.0",
-    "fastify": "^4.28.1",
     "@fastify/cors": "^9.0.1",
     "bullmq": "^5.12.0",
-    "ioredis": "^5.4.1",
-    "poseidon-lite": "^0.2.1",
     "dotenv": "^16.4.5",
+    "fastify": "^4.28.1",
+    "ioredis": "^5.4.1",
     "pino": "^9.3.2",
+    "pino-pretty": "^13.1.2",
+    "poseidon-lite": "^0.2.1",
+    "starknet": "^6.11.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
-    "tsx": "^4.16.2",
+    "eslint": "^9.7.0",
+    "tsx": "^4.20.6",
     "typescript": "^5.5.3",
-    "vitest": "^2.0.3",
-    "eslint": "^9.7.0"
+    "vitest": "^2.0.3"
   },
   "engines": {
     "node": ">=18.0.0"
