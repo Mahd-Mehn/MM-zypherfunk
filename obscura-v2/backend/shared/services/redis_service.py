@@ -379,6 +379,23 @@ class CacheKeys:
     def user_profile(user_id: str) -> str:
         return f"profile:{user_id}"
     
+    # Exchange-related
+    @staticmethod
+    def supported_exchanges() -> str:
+        return "exchanges:supported"
+    
+    @staticmethod
+    def exchange_details(exchange_id: str) -> str:
+        return f"exchanges:details:{exchange_id}"
+    
+    @staticmethod
+    def user_exchanges(user_id: str) -> str:
+        return f"exchanges:user:{user_id}"
+    
+    @staticmethod
+    def exchange_connection(connection_id: str) -> str:
+        return f"exchange:connection:{connection_id}"
+    
     # Subscription-related
     @staticmethod
     def subscription_plans() -> str:

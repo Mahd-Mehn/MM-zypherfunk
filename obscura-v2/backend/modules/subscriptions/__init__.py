@@ -10,12 +10,16 @@ Components:
 - billing: Billing cycles and invoicing
 """
 
-from .service import SubscriptionService, subscription_service
+from .service import app as subscription_service, subscription_manager
+from .manager import SubscriptionManager, BillingCycle, SubscriptionPlanDTO
 from .payments.zcash_client import ZcashClient, zcash
 
 __all__ = [
-    "SubscriptionService",
     "subscription_service",
+    "subscription_manager",
+    "SubscriptionManager",
+    "BillingCycle",
+    "SubscriptionPlanDTO",
     "ZcashClient",
     "zcash",
 ]

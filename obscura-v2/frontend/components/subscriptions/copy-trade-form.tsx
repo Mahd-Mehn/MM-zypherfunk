@@ -34,6 +34,11 @@ export function CopyTradeForm({ traderId, traderName }: CopyTradeFormProps) {
     try {
       await createSubscription({
         trader_id: traderId,
+        // Map to new backend fields
+        proportion_percent: maxCapitalPct,
+        max_position_usd: maxPositionSize ? parseFloat(maxPositionSize) : undefined,
+        copy_mode: "proportional",
+        // Keep legacy fields for now just in case
         max_capital_pct: maxCapitalPct,
         max_position_size: maxPositionSize ? parseFloat(maxPositionSize) : undefined,
         stop_loss_pct: stopLossPct ? parseFloat(stopLossPct) : undefined,

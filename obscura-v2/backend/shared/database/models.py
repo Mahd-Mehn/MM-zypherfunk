@@ -559,6 +559,130 @@ class MonitoringSession(Base):
 
 
 # ============================================================================
+# EXCHANGE CONNECTION MODEL
+# ============================================================================
+
+class ExchangeConnection(Base):
+    """User's exchange API connection"""
+    __tablename__ = "exchange_connections"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    
+    # Exchange info
+    exchange = Column(String(50), nullable=False)
+    exchange_type = Column(Enum(ExchangeType), default=ExchangeType.CEX)
+    label = Column(String(100), nullable=True)
+    
+    # Nillion reference (credentials stored in Nillion)
+    nillion_store_id = Column(String(255), nullable=True)
+    
+    # Status
+    status = Column(String(20), default="pending")  # pending, connected, error, disconnected
+    is_active = Column(Boolean, default=True)
+    is_signal_provider = Column(Boolean, default=False)  # User is a signal provider
+    
+    # Validation
+    last_validated_at = Column(DateTime, nullable=True)
+    last_synced_at = Column(DateTime, nullable=True)
+    validation_error = Column(Text, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        UniqueConstraint("user_id", "exchange", "label", name="uq_user_exchange_connection"),
+        Index("idx_exchange_conn_user", "user_id"),
+        Index("idx_exchange_conn_exchange", "exchange"),
+    )
+
+
+# ============================================================================
+# ACTIVITY LOG MODEL
+# ============================================================================
+
+class ActivityLog(Base):
+    """Audit log for all backend activities"""
+    __tablename__ = "activity_logs"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    
+    # Action info
+    action = Column(String(100), nullable=False)  # e.g., "trade.execute", "subscription.create"
+    entity_type = Column(String(50), nullable=False)  # e.g., "trade", "subscription", "exchange"
+    entity_id = Column(String(255), nullable=True)  # ID of affected entity
+    
+    # Details
+    details = Column(JSON, default=dict)  # Additional context
+    ip_address = Column(String(45), nullable=True)  # IPv4 or IPv6
+    user_agent = Column(String(500), nullable=True)
+    
+    # Result
+    success = Column(Boolean, default=True)
+    error_message = Column(Text, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    
+    __table_args__ = (
+        Index("idx_activity_user", "user_id"),
+        Index("idx_activity_action", "action"),
+        Index("idx_activity_entity", "entity_type", "entity_id"),
+        Index("idx_activity_created", "created_at"),
+    )
+
+
+# ============================================================================
+# SUPPORTED EXCHANGE MODEL (for caching CCXT exchanges)
+# ============================================================================
+
+class SupportedExchange(Base):
+    """Cached list of supported exchanges from CCXT"""
+    __tablename__ = "supported_exchanges"
+    
+    id = Column(String(50), primary_key=True)  # Exchange ID (e.g., 'binance')
+    
+    # Display info
+    name = Column(String(100), nullable=False)
+    display_name = Column(String(100), nullable=False)
+    logo_url = Column(String(500), nullable=True)
+    
+    # Type and features
+    exchange_type = Column(Enum(ExchangeType), default=ExchangeType.CEX)
+    countries = Column(JSON, default=list)
+    
+    # Capabilities
+    has_fetch_my_trades = Column(Boolean, default=False)
+    has_fetch_orders = Column(Boolean, default=False)
+    has_fetch_balance = Column(Boolean, default=False)
+    has_create_order = Column(Boolean, default=False)
+    has_cancel_order = Column(Boolean, default=False)
+    has_websocket = Column(Boolean, default=False)
+    
+    # Trading pairs
+    trading_pairs_count = Column(Integer, default=0)
+    
+    # Rate limits
+    rate_limit = Column(Integer, default=1000)  # ms between requests
+    
+    # Documentation
+    api_docs_url = Column(String(500), nullable=True)
+    
+    # Status
+    is_active = Column(Boolean, default=True)
+    
+    # Timestamps
+    last_updated = Column(DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        Index("idx_supported_exchange_type", "exchange_type"),
+        Index("idx_supported_exchange_active", "is_active"),
+    )
+
+
+# ============================================================================
 # HELPER FUNCTIONS
 # ============================================================================
 

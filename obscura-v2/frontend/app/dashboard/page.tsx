@@ -39,6 +39,8 @@ import type { Trade, Execution, Subscription } from "@/lib/api/types"
 import { shortenIdentifier } from "@/lib/utils"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { TraderFollower } from "@/lib/api/types"
+import { ArciumPrivateOrder } from "@/components/solana/arcium-widget"
+import { LiveActivityFeed } from "@/components/dashboard/LiveActivityFeed"
 
 const formatCurrency = (
   value: number,
@@ -647,38 +649,7 @@ export default function DashboardPage() {
                   <div className="grid lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-8">
                       {/* Recent activity */}
-                      <Card className="border-border/50">
-                        <CardHeader className="border-b">
-                          <CardTitle className="text-xl">Recent Activity</CardTitle>
-                          <CardDescription>Latest executions, followers, and verification events</CardDescription>
-                        </CardHeader>
-                        <CardContent className="pt-6">
-                          <div className="space-y-4">
-                            {activityFeed.length === 0 && (
-                              <div className="text-sm text-muted-foreground">No activity yet. Execute trades to see updates here.</div>
-                            )}
-                            {activityFeed.map((activity, i) => (
-                              <div
-                                key={`${activity.text}-${i}`}
-                                className="flex items-center gap-4 p-4 rounded-xl border border-border/50 hover:border-primary/30 hover:shadow-md transition-all"
-                              >
-                                <div
-                                  className={`h-12 w-12 rounded-xl ${activity.bg} flex items-center justify-center shrink-0`}
-                                >
-                                  <activity.icon className={`h-6 w-6 ${activity.color}`} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium mb-1 truncate">{activity.text}</div>
-                                  <div className="text-xs text-muted-foreground">{activity.time}</div>
-                                </div>
-                                <Badge variant="secondary" className="text-xs font-bold shrink-0">
-                                  {activity.value}
-                                </Badge>
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
+                      <LiveActivityFeed />
                     </div>
 
                     {/* Sidebar - Quick actions and CTA */}
@@ -708,6 +679,9 @@ export default function DashboardPage() {
                           </Button>
                         </CardContent>
                       </Card>
+
+                      {/* Arcium Private Execution Widget */}
+                      <ArciumPrivateOrder />
 
                       {/* Only show "Become a Signal Provider" for followers */}
                       {user?.user_type === 'follower' && (

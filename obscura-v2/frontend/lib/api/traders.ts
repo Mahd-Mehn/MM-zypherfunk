@@ -41,7 +41,7 @@ export const tradersAPI = {
    */
   async getTraderPerformance(
     traderId: string,
-    timeframe: '7d' | '30d' | '90d' | '1y' = '30d'
+    timeframe: '7d' | '30d' | '90d' | 'all' = '30d'
   ): Promise<TraderPerformance> {
     return apiClient.get<TraderPerformance>(`/api/v1/traders/${traderId}/performance`, {
       timeframe,
@@ -55,15 +55,19 @@ export const tradersAPI = {
     traderId: string,
     limit: number = 20,
     offset: number = 0
-  ): Promise<{ trades: Trade[]; total: number }> {
+  ): Promise<{ trades: Trade[]; total: number; limit: number; offset: number }> {
     return apiClient.get(`/api/v1/traders/${traderId}/trades`, { limit, offset })
   },
 
   /**
    * Get trader's followers
    */
-  async getTraderFollowers(traderId: string): Promise<{ followers: number; follower_list: any[] }> {
-    return apiClient.get(`/api/v1/traders/${traderId}/followers`)
+  async getTraderFollowers(
+    traderId: string,
+    limit: number = 20,
+    offset: number = 0
+  ): Promise<{ followers: any[]; total: number; limit: number; offset: number }> {
+    return apiClient.get(`/api/v1/traders/${traderId}/followers`, { limit, offset })
   },
 
   async getTraderSubscriberList(traderId: string): Promise<TraderFollowerListResponse> {

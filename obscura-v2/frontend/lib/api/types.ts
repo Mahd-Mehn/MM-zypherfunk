@@ -59,6 +59,7 @@ export interface ExchangeConnectionCreate {
   exchange: string
   api_key: string
   api_secret: string
+  passphrase?: string
   is_signal_provider?: boolean
 }
 
@@ -110,8 +111,15 @@ export interface Subscription {
 
 export interface SubscriptionCreate {
   trader_id: string
-  max_capital_pct: number
-  max_position_size?: number
+  copy_mode?: string
+  proportion_percent?: number
+  max_position_usd?: number
+  max_daily_trades?: number
+  exchanges?: string[]
+  
+  // Legacy fields mapping
+  max_capital_pct?: number // Maps to proportion_percent
+  max_position_size?: number // Maps to max_position_usd
   stop_loss_pct?: number
   take_profit_pct?: number
 }
@@ -185,17 +193,32 @@ export interface TraderPerformance {
 
 export interface Trade {
   id: string
-  trader_id: string
-  timestamp: string
-  asset_in: string
-  asset_out: string
-  amount_in: number
-  amount_out: number
-  pnl: number
-  pnl_percentage: number
-  verification_type: string
-  chain?: string
   exchange: string
+  symbol: string
+  side: 'buy' | 'sell'
+  order_type: string
+  status: string
+  amount: number
+  filled_amount: number
+  price: number
+  average_fill_price: number
+  pnl_usd: number
+  fees_usd: number
+  is_copy_trade: boolean
+  created_at: string
+  executed_at: string | null
+  
+  // Legacy fields for compatibility
+  trader_id?: string
+  timestamp?: string
+  asset_in?: string
+  asset_out?: string
+  amount_in?: number
+  amount_out?: number
+  pnl?: number
+  pnl_percentage?: number
+  verification_type?: string
+  chain?: string
   tx_hash?: string
 }
 

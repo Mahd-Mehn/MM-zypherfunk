@@ -207,6 +207,56 @@ class CoinbaseConnector(ExchangeConnector):
             print(f"Failed to get Coinbase pairs: {e}")
             return []
     
+    async def fetch_my_trades(
+        self, 
+        symbol: Optional[str] = None, 
+        since: Optional[int] = None,
+        limit: int = 100
+    ) -> List[dict]:
+        """
+        Fetch user's trade history from Coinbase.
+        
+        Args:
+            symbol: Trading pair (e.g., 'BTC/USD')
+            since: Unix timestamp in milliseconds
+            limit: Maximum number of trades per symbol
+            
+        Returns:
+            List of trade dictionaries in CCXT format
+        """
+        if not self.client:
+            await self.initialize()
+        
+        if not self.client:
+            raise RuntimeError("Client not initialized")
+        
+        all_trades = []
+        
+        try:
+            if symbol:
+                trades = await self.client.fetch_my_trades(symbol, since=since, limit=limit)
+                all_trades.extend(trades)
+            else:
+                # Get balance to determine which pairs to check
+                balance = await self.client.fetch_balance()
+                assets = [k for k, v in balance['total'].items() if v > 0 and k not in ['USD', 'USDC']]
+                
+                for asset in assets[:10]:
+                    for quote in ['USD', 'USDC', 'USDT']:
+                        pair = f"{asset}/{quote}"
+                        try:
+                            trades = await self.client.fetch_my_trades(pair, since=since, limit=limit)
+                            all_trades.extend(trades)
+                            break
+                        except Exception:
+                            pass
+            
+            all_trades.sort(key=lambda x: x.get('timestamp', 0))
+            return all_trades
+            
+        except Exception as e:
+            raise RuntimeError(f"Failed to fetch trades from Coinbase: {e}")
+    
     def format_symbol(self, base: str, quote: str) -> str:
         """Format symbol for Coinbase"""
         return f"{base}/{quote}"

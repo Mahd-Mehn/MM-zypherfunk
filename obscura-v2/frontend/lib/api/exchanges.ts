@@ -17,7 +17,8 @@ export const exchangesAPI = {
    * Get list of supported exchanges
    */
   async getSupportedExchanges(): Promise<SupportedExchange[]> {
-    return apiClient.get<SupportedExchange[]>('/api/v1/exchanges/supported')
+    const response = await apiClient.get<{ exchanges: SupportedExchange[] }>('/api/v1/exchanges/supported')
+    return response.exchanges
   },
 
   /**

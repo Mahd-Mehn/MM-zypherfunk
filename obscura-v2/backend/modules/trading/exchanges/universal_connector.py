@@ -397,6 +397,81 @@ class UniversalConnector(ExchangeConnector):
             'urls': self.exchange.urls if hasattr(self.exchange, 'urls') else {}
         }
 
+    async def fetch_my_trades(
+        self, 
+        symbol: Optional[str] = None, 
+        since: Optional[int] = None,
+        limit: int = 100
+    ) -> List[dict]:
+        """
+        Fetch user's trade history from the exchange.
+        
+        Args:
+            symbol: Trading pair (e.g., 'BTC/USDT'). If None, fetches for common pairs.
+            since: Unix timestamp in milliseconds to fetch trades from
+            limit: Maximum number of trades per symbol
+            
+        Returns:
+            List of trade dictionaries in CCXT format
+        """
+        if not self.exchange:
+            raise RuntimeError(f"{self.exchange_id} not initialized")
+        
+        # Check if exchange supports fetchMyTrades
+        if not self.exchange.has.get('fetchMyTrades'):
+            logger.warning(f"{self.exchange_id} does not support fetchMyTrades")
+            return []
+        
+        all_trades = []
+        
+        try:
+            if symbol:
+                # Fetch trades for specific symbol
+                trades = await self.exchange.fetch_my_trades(symbol, since=since, limit=limit)
+                all_trades.extend(trades)
+            else:
+                # Get balance to determine which pairs to check
+                try:
+                    balance = await self.exchange.fetch_balance()
+                    assets = [k for k, v in balance.get('total', {}).items() 
+                             if isinstance(v, (int, float)) and v > 0 and k not in ['USDT', 'USDC', 'USD', 'EUR']]
+                    
+                    # Fetch trades for each asset paired with USDT/USD
+                    quote_currencies = ['USDT', 'USDC', 'USD', 'EUR', 'BTC']
+                    for asset in assets[:10]:  # Limit to 10 assets
+                        for quote in quote_currencies:
+                            pair = f"{asset}/{quote}"
+                            if pair in self.exchange.markets:
+                                try:
+                                    trades = await self.exchange.fetch_my_trades(pair, since=since, limit=limit)
+                                    all_trades.extend(trades)
+                                except Exception:
+                                    pass  # Pair might not exist or no trades
+                                break  # Found a valid quote currency
+                except Exception as e:
+                    logger.warning(f"Could not determine assets from balance: {e}")
+                    # Fallback to common pairs
+                    common_pairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT']
+                    for pair in common_pairs:
+                        if pair in self.exchange.markets:
+                            try:
+                                trades = await self.exchange.fetch_my_trades(pair, since=since, limit=limit)
+                                all_trades.extend(trades)
+                            except Exception:
+                                pass
+            
+            # Sort by timestamp
+            all_trades.sort(key=lambda x: x.get('timestamp', 0))
+            return all_trades
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch trades from {self.exchange_id}: {e}")
+            raise RuntimeError(f"Failed to fetch trades: {e}")
+
+    async def get_supported_pairs(self) -> List[str]:
+        """Get list of supported trading pairs"""
+        return await self.get_trading_pairs()
+
 
 async def create_connector(exchange_id: str, config: Dict[str, Any]) -> UniversalConnector:
     """

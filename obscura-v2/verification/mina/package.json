@@ -1,0 +1,23 @@
+{
+  "name": "obscura-mina-verifier",
+  "version": "0.1.0",
+  "description": "Mina zkApp for verifying trading performance",
+  "main": "build/src/index.js",
+  "types": "build/src/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "buildw": "tsc --watch",
+    "test": "jest",
+    "testw": "jest --watch",
+    "lint": "eslint . --ext .ts"
+  },
+  "dependencies": {
+    "o1js": "^0.15.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0"
+  }
+}

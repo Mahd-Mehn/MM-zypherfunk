@@ -37,6 +37,21 @@ from .models import (
     Position,
     AnalyticsSnapshot,
     MonitoringSession,
+    ExchangeConnection,
+    ActivityLog,
+    SupportedExchange,
+)
+
+from .repositories import (
+    RepositoryFactory,
+    UserRepository,
+    TraderRepository,
+    TradeRepository,
+    ExchangeConnectionRepository,
+    SubscriptionRepository,
+    ActivityLogRepository,
+    PortfolioRepository,
+    get_repositories,
 )
 
 __all__ = [
@@ -69,4 +84,17 @@ __all__ = [
     "Position",
     "AnalyticsSnapshot",
     "MonitoringSession",
+    "ExchangeConnection",
+    "ActivityLog",
+    "SupportedExchange",
+    # Repositories
+    "RepositoryFactory",
+    "UserRepository",
+    "TraderRepository",
+    "TradeRepository",
+    "ExchangeConnectionRepository",
+    "SubscriptionRepository",
+    "ActivityLogRepository",
+    "PortfolioRepository",
+    "get_repositories",
 ]

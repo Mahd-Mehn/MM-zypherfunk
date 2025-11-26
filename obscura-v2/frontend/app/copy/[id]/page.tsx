@@ -130,6 +130,9 @@ export default function CopyTradingPage({ params }: { params: { id: string } }) 
     try {
       const payload = {
         trader_id: resolvedTraderId,
+        proportion_percent: copyPercentage[0],
+        max_position_usd: parseNumberOrUndefined(copyAmount),
+        copy_mode: "proportional",
         max_capital_pct: copyPercentage[0],
         max_position_size: parseNumberOrUndefined(copyAmount),
         stop_loss_pct: parseNumberOrUndefined(stopLoss),
