@@ -38,14 +38,14 @@ export default function LoginPage() {
         {/* Form */}
         <MagicLinkForm />
 
-        {/* Terms */}
-        <p className="text-center text-xs text-muted-foreground mt-6">
+        {/* Terms - suppressHydrationWarning due to browser extensions modifying links */}
+        <p className="text-center text-xs text-muted-foreground mt-6" suppressHydrationWarning>
           By continuing you agree to our{" "}
-          <Link href="/terms" className="text-primary hover:underline">
+          <Link href="/terms" className="text-primary hover:underline" suppressHydrationWarning>
             Terms of Service
           </Link>{" "}
           and{" "}
-          <Link href="/privacy" className="text-primary hover:underline">
+          <Link href="/privacy" className="text-primary hover:underline" suppressHydrationWarning>
             Privacy Policy
           </Link>
           . We use a secure passwordless login.

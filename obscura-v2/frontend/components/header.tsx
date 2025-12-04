@@ -2,10 +2,10 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Menu, X, LogOut, User, Moon, Sun } from "lucide-react"
+import { Menu, X, LogOut, User } from "lucide-react"
 import { useState, useEffect } from "react"
-import { useTheme } from "next-themes"
 import { useAuthContext } from "@/components/providers/auth-provider"
+import { ThemeToggle } from "@/components/theme-toggle"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +20,6 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const { user, isAuthenticated, logout } = useAuthContext()
-  const { theme, setTheme } = useTheme()
 
   useEffect(() => {
     setMounted(true)
@@ -36,12 +35,8 @@ export function Header() {
     return user.email.charAt(0).toUpperCase()
   }
 
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark")
-  }
-
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
@@ -90,19 +85,7 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-3">
-            {mounted && (
-              <button 
-                onClick={toggleTheme}
-                className="p-2 hover:bg-accent rounded-lg transition-colors"
-                aria-label="Toggle theme"
-              >
-                {theme === "dark" ? (
-                  <Sun className="w-5 h-5 text-foreground" />
-                ) : (
-                  <Moon className="w-5 h-5 text-foreground" />
-                )}
-              </button>
-            )}
+            <ThemeToggle />
             <button className="p-2 hover:bg-accent rounded-lg transition-colors">
               <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />

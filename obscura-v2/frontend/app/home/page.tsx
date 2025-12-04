@@ -229,7 +229,7 @@ export default function HomePage() {
                 <CardContent className="p-4">
                   <div className="text-sm text-muted-foreground mb-1">Realized PnL</div>
                   <div className="text-sm text-muted-foreground mb-1">Last 7days</div>
-                  <div className="text-2xl font-bold text-green-600">+4,200%</div>
+                  <div className="text-2xl font-bold text-success">+4,200%</div>
                 </CardContent>
               </Card>
               <Card>
@@ -295,7 +295,7 @@ export default function HomePage() {
                   {/* Trader Header */}
                   <div className="flex items-center gap-3 mb-4">
                     <Avatar className="w-12 h-12">
-                      <AvatarFallback className="bg-gray-200">
+                      <AvatarFallback className="bg-muted text-muted-foreground">
                         {trader.name.slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
@@ -323,7 +323,7 @@ export default function HomePage() {
                   {/* ROI */}
                   <div className="mb-2">
                     <div className="text-xs text-muted-foreground mb-1">ROI 7D</div>
-                    <div className="text-xl font-bold text-green-600">{trader.roi}</div>
+                    <div className="text-xl font-bold text-success">{trader.roi}</div>
                   </div>
 
                   {/* Chart */}
@@ -386,7 +386,7 @@ export default function HomePage() {
                   {/* Trader Header */}
                   <div className="flex items-center gap-3 mb-4">
                     <Avatar className="w-12 h-12">
-                      <AvatarFallback className="bg-gray-200">
+                      <AvatarFallback className="bg-muted text-muted-foreground">
                         {trader.name.slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
@@ -414,7 +414,7 @@ export default function HomePage() {
                   {/* ROI */}
                   <div className="mb-2">
                     <div className="text-xs text-muted-foreground mb-1">ROI 7D</div>
-                    <div className="text-xl font-bold text-green-600">{trader.roi}</div>
+                    <div className="text-xl font-bold text-success">{trader.roi}</div>
                   </div>
 
                   {/* Chart */}
@@ -477,7 +477,7 @@ export default function HomePage() {
                   {/* Trader Header */}
                   <div className="flex items-center gap-3 mb-4">
                     <Avatar className="w-12 h-12">
-                      <AvatarFallback className="bg-gray-200">
+                      <AvatarFallback className="bg-muted text-muted-foreground">
                         {trader.name.slice(0, 2)}
                       </AvatarFallback>
                     </Avatar>
@@ -505,7 +505,7 @@ export default function HomePage() {
                   {/* ROI */}
                   <div className="mb-2">
                     <div className="text-xs text-muted-foreground mb-1">ROI 7D</div>
-                    <div className="text-xl font-bold text-green-600">{trader.roi}</div>
+                    <div className="text-xl font-bold text-success">{trader.roi}</div>
                   </div>
 
                   {/* Chart */}
