@@ -1,2 +1,3 @@
 [sncast.default]
-account = "deployer"
+url = "https://ztarknet-madara.d.karnot.xyz"
+account = "ztarknet"

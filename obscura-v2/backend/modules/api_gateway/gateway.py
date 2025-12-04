@@ -1265,10 +1265,32 @@ async def get_dashboard_data(
 async def startup_event():
     """Initialize services on startup"""
     logger.info("Starting Obscura V2 Gateway...")
-    await trade_monitor.start_monitoring()
-    await copy_engine.start()
+    
+    # Initialize database tables
+    try:
+        from shared.database.connection import init_db
+        await init_db()
+        logger.info("Database tables initialized")
+    except Exception as e:
+        logger.warning(f"Database initialization skipped or failed: {e}")
+    
+    # Start monitoring (gracefully handles missing tables)
+    try:
+        await trade_monitor.start_monitoring()
+    except Exception as e:
+        logger.warning(f"Trade monitor startup failed (will retry on demand): {e}")
+    
+    try:
+        await copy_engine.start()
+    except Exception as e:
+        logger.warning(f"Copy engine startup failed: {e}")
+    
     # Start the Redis listener for WebSockets
-    await ws_manager.start_redis_listener()
+    try:
+        await ws_manager.start_redis_listener()
+    except Exception as e:
+        logger.warning(f"WebSocket Redis listener failed: {e}")
+    
     logger.info("Obscura V2 Gateway started successfully")
 
 

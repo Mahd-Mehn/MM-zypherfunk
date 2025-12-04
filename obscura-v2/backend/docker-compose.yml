@@ -84,6 +84,9 @@ services:
       ZCASH_RPC_USER: ${ZCASH_RPC_USER:-}
       ZCASH_RPC_PASSWORD: ${ZCASH_RPC_PASSWORD:-}
       
+      # Internal Service URLs
+      PAYMENTS_SERVICE_URL: ${PAYMENTS_SERVICE_URL:-http://payments:8000}
+      
       # Application
       SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
       DEBUG: ${DEBUG:-false}
@@ -287,6 +290,47 @@ services:
       - full
 
   # ===========================================================================
+  # Zcash Payments Module - Subscription Payment Processing
+  # ===========================================================================
+  
+  payments:
+    build:
+      context: .
+      dockerfile: payments/Dockerfile
+    container_name: obscura-payments
+    restart: unless-stopped
+    ports:
+      - "${PAYMENTS_PORT:-8006}:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-obscura}:${POSTGRES_PASSWORD:-obscura_secret}@postgres:5432/${POSTGRES_DB:-obscura}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-obscura_redis}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
+      
+      # Zcash/Lightwalletd Configuration
+      LIGHTWALLETD_URL: ${LIGHTWALLETD_URL:-https://mainnet.lightwalletd.com:9067}
+      ZCASH_NETWORK: ${ZCASH_NETWORK:-mainnet}
+      ZECWALLET_CLI_PATH: /usr/local/bin/zecwallet-cli
+      WALLET_DATA_DIR: /app/data/wallet
+      ZECWALLET_DECRYPTION_KEY: ${ZECWALLET_DECRYPTION_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - zcash_wallet_data:/app/data/wallet
+    networks:
+      - obscura-network
+    profiles:
+      - standalone
+      - full
+
+  # ===========================================================================
   # Database Migrations
   # ===========================================================================
   
@@ -325,4 +369,6 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  zcash_wallet_data:
     driver: local

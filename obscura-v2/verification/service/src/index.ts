@@ -10,6 +10,8 @@ import { config } from './config/index.ts';
 import { logger } from './utils/logger.ts';
 import { proofRoutes } from './routes/proof.ts';
 import { healthRoutes } from './routes/health.ts';
+import { paymentRoutes } from './routes/payment.ts';
+import { starknetClient } from './services/starknet.ts';
 
 const app = Fastify({
   logger: logger,
@@ -24,10 +26,15 @@ await app.register(cors, {
 // Register routes
 await app.register(proofRoutes, { prefix: '/api/v1/proof' });
 await app.register(healthRoutes, { prefix: '/api/v1/health' });
+await app.register(paymentRoutes, { prefix: '/api/v1/payment' });
 
 // Start server
 const start = async () => {
   try {
+    // Initialize Starknet client
+    await starknetClient.initialize();
+    logger.info('Starknet client initialized');
+
     await app.listen({ port: config.port, host: '0.0.0.0' });
     logger.info(`Verification service running on port ${config.port}`);
   } catch (err) {

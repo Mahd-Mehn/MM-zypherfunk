@@ -146,9 +146,9 @@ def get_async_engine():
                 echo=os.getenv("DB_ECHO", "false").lower() == "true"
             )
         else:
+            # Note: Don't specify poolclass for async engine - SQLAlchemy will use AsyncAdaptedQueuePool
             _async_engine = create_async_engine(
                 database_url,
-                poolclass=QueuePool,
                 pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
                 max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "10")),
                 pool_pre_ping=True,

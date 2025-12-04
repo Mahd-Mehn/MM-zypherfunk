@@ -1,59 +1,11 @@
 /**
  * Starknet Client for Submitting Verified Reports
+ * Updated for starknet.js v8 API
  */
 
-import { Account, Contract, RpcProvider, CallData, cairo } from 'starknet';
+import { Account, RpcProvider } from 'starknet';
 import { config } from '../config/index.ts';
 import { logger } from '../utils/logger.ts';
-
-// Verifier contract ABI (simplified - real ABI would be generated from Cairo build)
-const VERIFIER_ABI = [
-  {
-    name: 'submit_report',
-    type: 'function',
-    inputs: [
-      { name: 'report', type: 'TradingReport' },
-      { name: 'total_pnl_value', type: 'u128' },
-      { name: 'total_pnl_negative', type: 'bool' },
-    ],
-    outputs: [{ type: 'u256' }],
-  },
-  {
-    name: 'get_report',
-    type: 'function',
-    inputs: [{ name: 'report_id', type: 'u256' }],
-    outputs: [{ type: 'StoredReport' }],
-    state_mutability: 'view',
-  },
-  {
-    name: 'get_trader_reports',
-    type: 'function',
-    inputs: [{ name: 'trader', type: 'ContractAddress' }],
-    outputs: [{ type: 'Array<u256>' }],
-    state_mutability: 'view',
-  },
-  {
-    name: 'get_report_count',
-    type: 'function',
-    inputs: [],
-    outputs: [{ type: 'u256' }],
-    state_mutability: 'view',
-  },
-  {
-    name: 'is_commitment_used',
-    type: 'function',
-    inputs: [{ name: 'commitment', type: 'felt252' }],
-    outputs: [{ type: 'bool' }],
-    state_mutability: 'view',
-  },
-  {
-    name: 'get_trader_stats',
-    type: 'function',
-    inputs: [{ name: 'trader', type: 'ContractAddress' }],
-    outputs: [{ type: 'TraderStats' }],
-    state_mutability: 'view',
-  },
-];
 
 /**
  * Trading report structure for submission
@@ -79,18 +31,18 @@ export interface SubmissionResult {
 
 /**
  * Starknet client for interacting with the verifier contract
+ * Updated for starknet.js v8 API
  */
 export class StarknetClient {
   private provider: RpcProvider;
   private account: Account | null = null;
-  private contract: Contract | null = null;
 
   constructor() {
     this.provider = new RpcProvider({ nodeUrl: config.starknet.rpcUrl });
   }
 
   /**
-   * Initialize the account and contract
+   * Initialize the account
    */
   async initialize(): Promise<void> {
     if (!config.starknet.accountAddress || !config.starknet.privateKey) {
@@ -98,19 +50,22 @@ export class StarknetClient {
       return;
     }
 
-    this.account = new Account(
-      this.provider,
-      config.starknet.accountAddress,
-      config.starknet.privateKey
-    );
+    // starknet.js v8 uses object-based constructor
+    this.account = new Account({
+      provider: this.provider,
+      address: config.starknet.accountAddress,
+      signer: config.starknet.privateKey,
+      cairoVersion: '1',
+    });
 
-    if (config.starknet.verifierContractAddress) {
-      this.contract = new Contract(
-        VERIFIER_ABI,
-        config.starknet.verifierContractAddress,
-        this.account
-      );
-    }
+    logger.info({ address: config.starknet.accountAddress }, 'Starknet account initialized');
+  }
+
+  /**
+   * Get the provider (for read operations)
+   */
+  getProvider(): RpcProvider {
+    return this.provider;
   }
 
   /**
@@ -121,47 +76,49 @@ export class StarknetClient {
     totalPnlValue: bigint,
     totalPnlNegative: boolean
   ): Promise<SubmissionResult> {
-    if (!this.contract || !this.account) {
-      throw new Error('Starknet client not initialized');
+    if (!this.account) {
+      throw new Error('Starknet account not initialized');
+    }
+
+    if (!config.starknet.verifierContractAddress) {
+      throw new Error('Verifier contract address not configured');
     }
 
     logger.info({ report }, 'Submitting report to Starknet');
 
-    // Prepare calldata
-    const calldata = CallData.compile({
-      report: {
-        trader: report.trader,
-        timestamp_start: cairo.uint256(report.timestampStart),
-        timestamp_end: cairo.uint256(report.timestampEnd),
-        trade_count: report.tradeCount,
-        symbol_count: report.symbolCount,
-        report_hash: report.reportHash.toString(),
-        commitment: report.commitment.toString(),
-      },
-      total_pnl_value: cairo.uint256(totalPnlValue),
-      total_pnl_negative: totalPnlNegative,
-    });
+    // Prepare calldata - flatten struct for raw call
+    const calldata = [
+      report.trader,                         // trader (ContractAddress)
+      report.timestampStart.toString(),      // timestamp_start (u64)
+      report.timestampEnd.toString(),        // timestamp_end (u64)
+      report.tradeCount.toString(),          // trade_count (u32)
+      report.symbolCount.toString(),         // symbol_count (u32)
+      '0x' + report.reportHash.toString(16), // report_hash (felt252)
+      '0x' + report.commitment.toString(16), // commitment (felt252)
+      totalPnlValue.toString(),              // total_pnl_value (u128)
+      totalPnlNegative ? '1' : '0',          // total_pnl_negative (bool)
+    ];
 
     // Execute transaction
-    const { transaction_hash } = await this.account.execute({
+    const { transaction_hash } = await this.account.execute([{
       contractAddress: config.starknet.verifierContractAddress,
       entrypoint: 'submit_report',
       calldata,
-    });
+    }]);
 
     logger.info({ transaction_hash }, 'Transaction submitted');
 
     // Wait for confirmation
-    const receipt = await this.provider.waitForTransaction(transaction_hash);
+    await this.provider.waitForTransaction(transaction_hash);
 
-    // Extract report ID from events (simplified)
-    const reportId = 0n; // Would parse from receipt.events
-
-    // Fetch block number explicitly (receipt may not expose block_number)
+    // Fetch block number
     const blockNumber = await this.provider.getBlockNumber();
 
+    // Get report count to determine report ID
+    const reportCount = await this.getReportCount();
+
     return {
-      reportId,
+      reportId: reportCount,
       transactionHash: transaction_hash,
       blockNumber,
     };
@@ -171,24 +128,76 @@ export class StarknetClient {
    * Check if a commitment has already been used
    */
   async isCommitmentUsed(commitment: bigint): Promise<boolean> {
-    if (!this.contract) {
-      throw new Error('Contract not initialized');
+    if (!config.starknet.verifierContractAddress) {
+      throw new Error('Verifier contract address not configured');
     }
 
-    const result = await this.contract.call('is_commitment_used', [commitment.toString()]);
-    return Boolean(result);
+    const result = await this.provider.callContract({
+      contractAddress: config.starknet.verifierContractAddress,
+      entrypoint: 'is_commitment_used',
+      calldata: ['0x' + commitment.toString(16)],
+    });
+
+    return result[0] === '0x1';
   }
 
   /**
    * Get report count
    */
   async getReportCount(): Promise<bigint> {
-    if (!this.contract) {
-      throw new Error('Contract not initialized');
+    if (!config.starknet.verifierContractAddress) {
+      throw new Error('Verifier contract address not configured');
     }
 
-    const result = await this.contract.call('get_report_count', []);
-    return BigInt(result.toString());
+    const result = await this.provider.callContract({
+      contractAddress: config.starknet.verifierContractAddress,
+      entrypoint: 'get_report_count',
+      calldata: [],
+    });
+
+    // Result is u256 (low, high)
+    const low = BigInt(result[0]);
+    const high = BigInt(result[1]);
+    return low + (high << 128n);
+  }
+
+  /**
+   * Check if a trader is registered
+   */
+  async isTraderRegistered(traderAddress: string): Promise<boolean> {
+    if (!config.starknet.verifierContractAddress) {
+      throw new Error('Verifier contract address not configured');
+    }
+
+    const result = await this.provider.callContract({
+      contractAddress: config.starknet.verifierContractAddress,
+      entrypoint: 'is_registered',
+      calldata: [traderAddress],
+    });
+
+    return result[0] === '0x1';
+  }
+
+  /**
+   * Register a trader
+   */
+  async registerTrader(): Promise<string> {
+    if (!this.account) {
+      throw new Error('Starknet account not initialized');
+    }
+
+    if (!config.starknet.verifierContractAddress) {
+      throw new Error('Verifier contract address not configured');
+    }
+
+    const { transaction_hash } = await this.account.execute([{
+      contractAddress: config.starknet.verifierContractAddress,
+      entrypoint: 'register_trader',
+      calldata: [],
+    }]);
+
+    await this.provider.waitForTransaction(transaction_hash);
+    return transaction_hash;
   }
 
   /**
@@ -200,19 +209,35 @@ export class StarknetClient {
     totalPnlValue: bigint;
     totalPnlNegative: boolean;
   }> {
-    if (!this.contract) {
-      throw new Error('Contract not initialized');
+    if (!config.starknet.verifierContractAddress) {
+      throw new Error('Verifier contract address not configured');
     }
 
-    const result = await this.contract.call('get_trader_stats', [traderAddress]);
-    
-    // Parse result (structure depends on actual ABI)
-    return {
-      totalReports: 0,
-      totalTrades: 0,
-      totalPnlValue: 0n,
-      totalPnlNegative: false,
-    };
+    try {
+      const result = await this.provider.callContract({
+        contractAddress: config.starknet.verifierContractAddress,
+        entrypoint: 'get_trader_stats',
+        calldata: [traderAddress],
+      });
+
+      // Parse TraderStats struct
+      // total_reports (u32), total_trades (u32), total_pnl_value (u128), 
+      // total_pnl_negative (bool), first_report_block (u64), last_report_block (u64)
+      return {
+        totalReports: parseInt(result[0], 16),
+        totalTrades: parseInt(result[1], 16),
+        totalPnlValue: BigInt(result[2]),
+        totalPnlNegative: result[3] === '0x1',
+      };
+    } catch (error) {
+      logger.warn({ error, traderAddress }, 'Failed to get trader stats');
+      return {
+        totalReports: 0,
+        totalTrades: 0,
+        totalPnlValue: 0n,
+        totalPnlNegative: false,
+      };
+    }
   }
 }
 

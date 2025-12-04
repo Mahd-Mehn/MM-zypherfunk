@@ -1,4 +1,4 @@
-# legacy/
+legacy/
 documentation/
 venv/
 # Python
@@ -260,3 +260,11 @@ obscura-v2/verification/service/package-lock.json
 obscura-v2/verification/service/.env
 obscura-v2/verification/service/dist/
 obscura-v2/verification/service/build/
+quickstart/
+obscura-v2/FULL_FUNCTIONALITY_CHECKLIST.md
+dump.rdb
+hackathon-details.md
+obscura-v2/FULL_FUNCTIONALITY_ROADMAP.md
+obscura-v2/IMPLEMENTATION_STATUS.md
+obscura-v2/STRATEGIC_ROADMAP.md
+obscura-v2/ZCASH_INTEGRATION.md

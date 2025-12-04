@@ -184,13 +184,17 @@ class TradeMonitor:
 
     async def _load_active_sessions(self):
         """Load all active sessions from DB"""
-        async with get_async_session() as session:
-            stmt = select(MonitoringSession).where(MonitoringSession.is_active == True)
-            result = await session.execute(stmt)
-            sessions = result.scalars().all()
-            
-            for s in sessions:
-                await self._init_connector(s)
+        try:
+            async with get_async_session() as session:
+                stmt = select(MonitoringSession).where(MonitoringSession.is_active == True)
+                result = await session.execute(stmt)
+                sessions = result.scalars().all()
+                
+                for s in sessions:
+                    await self._init_connector(s)
+        except Exception as e:
+            # Table might not exist yet - this is OK on first startup
+            logger.warning(f"Could not load active sessions (table may not exist yet): {e}")
 
     async def _init_connector(self, session_obj: MonitoringSession):
         """Initialize connector for a session"""

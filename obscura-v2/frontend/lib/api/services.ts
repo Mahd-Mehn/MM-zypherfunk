@@ -1,6 +1,14 @@
-const CITADEL_URL = "http://localhost:8004";
-const CONDUCTOR_URL = "http://localhost:8001";
-const PAYMENTS_URL = "http://localhost:8005";
+/**
+ * Legacy Services - Direct service connections
+ * 
+ * NOTE: For Zcash payments, prefer using zcashPaymentsAPI from './zcash-payments'
+ * This file provides direct service access for Citadel (TEE) and Conductor (execution)
+ */
+
+import { zcashPaymentsAPI } from './zcash-payments'
+
+const CITADEL_URL = process.env.NEXT_PUBLIC_CITADEL_URL || "http://localhost:8004";
+const CONDUCTOR_URL = process.env.NEXT_PUBLIC_CONDUCTOR_URL || "http://localhost:8001";
 
 export const CitadelService = {
   async storeSecret(secret: string, name: string) {
@@ -32,29 +40,15 @@ export const ConductorService = {
   },
 };
 
+// Re-export zcashPaymentsAPI as PaymentsService for backward compatibility
 export const PaymentsService = {
-  async subscribe(userId: string, tier: string) {
-    const res = await fetch(`${PAYMENTS_URL}/subscribe`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: userId, tier }),
-    });
-    return res.json();
+  async subscribe(userId: string, tier: string, traderId?: string) {
+    return zcashPaymentsAPI.createPayment({ userId, tier: tier as 'basic' | 'pro' | 'premium', traderId });
   },
   async checkPayment(paymentAddress: string) {
-    const res = await fetch(`${PAYMENTS_URL}/check`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ payment_address: paymentAddress }),
-    });
-    return res.json();
+    return zcashPaymentsAPI.checkPaymentByAddress(paymentAddress);
   },
   async simulatePayment(paymentAddress: string) {
-    const res = await fetch(`${PAYMENTS_URL}/simulate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ payment_address: paymentAddress }),
-    });
-    return res.json();
+    return zcashPaymentsAPI.simulatePayment(paymentAddress);
   },
 };
