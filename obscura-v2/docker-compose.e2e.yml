@@ -165,34 +165,36 @@ services:
   # Optional: Full Zcash Node (for production)
   # ============================================
 
-  # Uncomment for local Zcash node testing
-  zcashd:
-    image: electriccoinco/zcashd:v5.10.0
-    container_name: obscura-zcashd
-    environment:
-      - ZCASHD_NETWORK=testnet
-    ports:
-      - "18232:18232"
-      - "18233:18233"
-    volumes:
-      - zcash_data:/root/.zcash
-      - ./backend/payments/config/zcash.conf:/root/.zcash/zcash.conf:ro
-    command: zcashd -testnet
+  # NOTE: These images don't support ARM64 (Apple Silicon)
+  # Uncomment only on x86_64 Linux servers for local Zcash node testing
+  
+  # zcashd:
+  #   image: electriccoinco/zcashd:v5.10.0
+  #   container_name: obscura-zcashd
+  #   environment:
+  #     - ZCASHD_NETWORK=testnet
+  #   ports:
+  #     - "18232:18232"
+  #     - "18233:18233"
+  #   volumes:
+  #     - zcash_data:/root/.zcash
+  #     - ./backend/payments/config/zcash.conf:/root/.zcash/zcash.conf:ro
+  #   command: zcashd -testnet
 
-  lightwalletd:
-    image: electriccoinco/lightwalletd:v0.4.18
-    container_name: obscura-lightwalletd
-    environment:
-      - ZCASHD_RPCUSER=zcashrpc
-      - ZCASHD_RPCPASSWORD=zcashpassword
-    ports:
-      - "9067:9067"
-    depends_on:
-      - zcashd
-    command: >
-      --zcash-conf-path /etc/zcash/zcash.conf
-      --data-dir /var/lib/lightwalletd
-      --no-tls-very-insecure
+  # lightwalletd:
+  #   image: electriccoinco/lightwalletd:v0.4.18
+  #   container_name: obscura-lightwalletd
+  #   environment:
+  #     - ZCASHD_RPCUSER=zcashrpc
+  #     - ZCASHD_RPCPASSWORD=zcashpassword
+  #   ports:
+  #     - "9067:9067"
+  #   depends_on:
+  #     - zcashd
+  #   command: >
+  #     --zcash-conf-path /etc/zcash/zcash.conf
+  #     --data-dir /var/lib/lightwalletd
+  #     --no-tls-very-insecure
 
 volumes:
   postgres_data:
