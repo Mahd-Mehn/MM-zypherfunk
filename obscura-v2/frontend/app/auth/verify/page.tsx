@@ -68,8 +68,8 @@ export default function VerifyPage() {
 
           {status === "success" && (
             <Alert className="border-green-500 bg-green-50 dark:bg-green-950">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800 dark:text-green-200">
+              <CheckCircle2 className="h-4 w-4 text-success" />
+              <AlertDescription className="text-success-foreground">
                 Successfully verified! Redirecting to onboarding...
               </AlertDescription>
             </Alert>

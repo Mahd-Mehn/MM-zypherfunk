@@ -117,7 +117,7 @@ const trades = [
     id: "6",
     pair: "XRP/USDT",
     pairIcon: "X",
-    pairIconBg: "bg-gray-700",
+    pairIconBg: "bg-secondary",
     type: "LONG",
     verified: true,
     followers: 58,
@@ -246,7 +246,7 @@ export default function LiveFeedPage() {
                   </div>
                   <Badge
                     variant={trade.type === "LONG" ? "default" : "secondary"}
-                    className={trade.type === "LONG" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}
+                    className={trade.type === "LONG" ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"}
                   >
                     {trade.type}
                   </Badge>
@@ -265,7 +265,7 @@ export default function LiveFeedPage() {
                 {/* ROI */}
                 <div className="mb-2">
                   <div className="text-xs text-muted-foreground">ROI</div>
-                  <div className="text-xl font-bold text-green-600">{trade.roi}</div>
+                  <div className="text-xl font-bold text-success">{trade.roi}</div>
                 </div>
 
                 {/* Chart */}
@@ -297,7 +297,7 @@ export default function LiveFeedPage() {
                       O
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-red-500">{trade.creator}</span>
+                  <span className="text-primary">{trade.creator}</span>
                 </div>
 
                 {/* Copy Button */}

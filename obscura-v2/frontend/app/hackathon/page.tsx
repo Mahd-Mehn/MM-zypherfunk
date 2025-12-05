@@ -74,7 +74,7 @@ export default function HackathonPage() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-white p-8 font-sans">
+        <div className="min-h-screen bg-background text-foreground p-8 font-sans">
             <h1 className="text-4xl font-bold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
                 Obscura V2: The Grand Slam
             </h1>
@@ -82,9 +82,9 @@ export default function HackathonPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
 
                 {/* Zcash Card */}
-                <div className="border border-gray-800 p-6 rounded-xl bg-gray-900/50">
+                <div className="border border-border p-6 rounded-xl bg-card">
                     <h2 className="text-2xl font-bold mb-4 text-yellow-400">1. Shielded Subscription</h2>
-                    <p className="text-gray-400 mb-4">Pay with ZEC to unlock the platform.</p>
+                    <p className="text-muted-foreground mb-4">Pay with ZEC to unlock the platform.</p>
 
                     {paymentStatus === "idle" && (
                         <button
@@ -97,7 +97,7 @@ export default function HackathonPage() {
 
                     {paymentStatus === "waiting_for_payment" && (
                         <div className="space-y-4">
-                            <div className="bg-gray-800 p-3 rounded break-all font-mono text-xs">
+                            <div className="bg-muted p-3 rounded break-all font-mono text-xs text-foreground">
                                 {paymentAddress}
                             </div>
                             <div className="flex items-center justify-center space-x-2 animate-pulse text-yellow-500">
@@ -113,16 +113,16 @@ export default function HackathonPage() {
                     )}
 
                     {paymentStatus === "paid" && (
-                        <div className="text-green-400 font-bold text-center border border-green-500/30 bg-green-500/10 p-4 rounded">
+                        <div className="text-success font-bold text-center border border-success/30 bg-success/10 p-4 rounded">
                             ✅ Subscription Active
                         </div>
                     )}
                 </div>
 
                 {/* Nillion Card */}
-                <div className="border border-gray-800 p-6 rounded-xl bg-gray-900/50">
+                <div className="border border-border p-6 rounded-xl bg-card">
                     <h2 className="text-2xl font-bold mb-4 text-blue-400">2. The Glass Vault</h2>
-                    <p className="text-gray-400 mb-4">Store API keys in Nillion Network.</p>
+                    <p className="text-muted-foreground mb-4">Store API keys in Nillion Network.</p>
 
                     <div className="space-y-4">
                         <input
@@ -130,7 +130,7 @@ export default function HackathonPage() {
                             placeholder="Enter Exchange API Key"
                             value={apiKey}
                             onChange={(e) => setApiKey(e.target.value)}
-                            className="w-full bg-gray-800 border border-gray-700 rounded p-2 text-white focus:outline-none focus:border-blue-500"
+                            className="w-full bg-muted border border-border rounded p-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
                         />
                         <button
                             onClick={handleStoreKey}
@@ -141,7 +141,7 @@ export default function HackathonPage() {
                         </button>
 
                         {storeId && (
-                            <div className="text-xs text-gray-500 font-mono mt-2">
+                            <div className="text-xs text-muted-foreground font-mono mt-2">
                                 Store ID: {storeId}
                             </div>
                         )}
@@ -149,33 +149,33 @@ export default function HackathonPage() {
                 </div>
 
                 {/* NEAR Card */}
-                <div className="border border-gray-800 p-6 rounded-xl bg-gray-900/50">
-                    <h2 className="text-2xl font-bold mb-4 text-green-400">3. Universal Remote</h2>
-                    <p className="text-gray-400 mb-4">Execute trades via NEAR Chain Signatures.</p>
+                <div className="border border-border p-6 rounded-xl bg-card">
+                    <h2 className="text-2xl font-bold mb-4 text-primary">3. Universal Remote</h2>
+                    <p className="text-muted-foreground mb-4">Execute trades via NEAR Chain Signatures.</p>
 
                     <div className="space-y-4">
-                        <div className="bg-gray-800 p-3 rounded text-sm text-gray-300">
-                            <div>Action: Swap USDC -> ETH</div>
+                        <div className="bg-muted p-3 rounded text-sm text-muted-foreground">
+                            <div>Action: Swap USDC -&gt; ETH</div>
                             <div>Chain: Base</div>
                         </div>
 
                         <button
                             onClick={handleExecute}
                             disabled={paymentStatus !== "paid" || nillionStatus !== "stored"}
-                            className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded w-full"
+                            className="bg-success hover:bg-success/80 disabled:opacity-50 disabled:cursor-not-allowed text-success-foreground font-bold py-2 px-4 rounded w-full"
                         >
                             Execute via NEAR MPC
                         </button>
 
                         {paymentStatus !== "paid" && (
-                            <p className="text-xs text-red-400 text-center">Requires Subscription</p>
+                            <p className="text-xs text-destructive text-center">Requires Subscription</p>
                         )}
 
                         {executionResult && (
-                            <div className="mt-4 p-3 bg-gray-800 rounded text-xs font-mono overflow-hidden">
-                                <div className="text-green-400 mb-1">Success!</div>
-                                <div>Tx: {executionResult.tx_hash}</div>
-                                <div className="mt-1 text-gray-500">Signed by NEAR MPC</div>
+                            <div className="mt-4 p-3 bg-muted rounded text-xs font-mono overflow-hidden">
+                                <div className="text-success mb-1">Success!</div>
+                                <div className="text-foreground">Tx: {executionResult.tx_hash}</div>
+                                <div className="mt-1 text-muted-foreground">Signed by NEAR MPC</div>
                             </div>
                         )}
                     </div>

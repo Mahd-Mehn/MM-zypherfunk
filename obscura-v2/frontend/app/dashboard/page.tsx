@@ -442,7 +442,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className={`font-medium ${item.pnl >= 0 ? "text-green-500" : "text-red-500"}`}>
+                  <p className={`font-medium ${item.pnl >= 0 ? "text-success" : "text-destructive"}`}>
                     {item.pnl >= 0 ? "+" : ""}{formatCurrency(item.pnl)}
                   </p>
                 </div>

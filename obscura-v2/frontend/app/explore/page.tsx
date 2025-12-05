@@ -164,24 +164,24 @@ export default function ExplorePage() {
                 id="verified"
                 checked={verifiedOnly}
                 onChange={(e) => setVerifiedOnly(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300"
+                className="w-4 h-4 rounded border-border accent-primary"
               />
-              <label htmlFor="verified" className="text-sm whitespace-nowrap">
+              <label htmlFor="verified" className="text-sm whitespace-nowrap text-foreground">
                 Verified Only
               </label>
             </div>
 
             {/* View Mode Toggle */}
-            <div className="flex gap-1 border rounded-md p-1">
+            <div className="flex gap-1 border border-border rounded-md p-1 bg-background">
               <button
                 onClick={() => setViewMode("list")}
-                className={`p-2 rounded ${viewMode === "list" ? "bg-gray-100" : ""}`}
+                className={`p-2 rounded text-foreground ${viewMode === "list" ? "bg-accent" : "hover:bg-accent/50"}`}
               >
                 <List className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setViewMode("grid")}
-                className={`p-2 rounded ${viewMode === "grid" ? "bg-gray-100" : ""}`}
+                className={`p-2 rounded text-foreground ${viewMode === "grid" ? "bg-accent" : "hover:bg-accent/50"}`}
               >
                 <LayoutGrid className="h-4 w-4" />
               </button>
@@ -224,7 +224,7 @@ export default function ExplorePage() {
             </thead>
             <tbody>
               {traders.map((trader, index) => (
-                <tr key={trader.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+                <tr key={trader.id} className="border-b border-border hover:bg-accent/50 transition-colors">
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
                       <Avatar className="w-10 h-10">
@@ -241,19 +241,19 @@ export default function ExplorePage() {
                     </div>
                   </td>
                   <td className="py-4 px-4">
-                    <span className="text-green-600 font-medium">{trader.roi}</span>
+                    <span className="text-success font-medium">{trader.roi}</span>
                   </td>
                   <td className="py-4 px-4">
-                    <span className="font-medium">{trader.pnl}</span>
+                    <span className="font-medium text-foreground">{trader.pnl}</span>
                   </td>
                   <td className="py-4 px-4">
-                    <span className="font-medium">{trader.followingPnl}</span>
+                    <span className="font-medium text-foreground">{trader.followingPnl}</span>
                   </td>
                   <td className="py-4 px-4">
-                    <span className="font-medium">{trader.winRate}</span>
+                    <span className="font-medium text-foreground">{trader.winRate}</span>
                   </td>
                   <td className="py-4 px-4">
-                    <span className="font-medium">{trader.followers}</span>
+                    <span className="font-medium text-foreground">{trader.followers}</span>
                   </td>
                   <td className="py-4 px-4 text-right">
                     <Button

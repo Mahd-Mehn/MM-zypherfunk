@@ -347,10 +347,10 @@ export default function HomePage() {
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center text-xs">₿</div>
                     <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-xs text-white">◎</div>
-                    <div className="w-5 h-5 rounded-full bg-gray-800 flex items-center justify-center text-xs text-white">≡</div>
+                    <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-xs text-secondary-foreground">≡</div>
                     <span className="text-xs text-muted-foreground ml-auto">2</span>
-                    <TrendingUp className="w-4 h-4" />
-                    <span className="text-xs">10%</span>
+                    <TrendingUp className="w-4 h-4 text-foreground" />
+                    <span className="text-xs text-foreground">10%</span>
                   </div>
 
                   {/* Copy Button */}
@@ -438,10 +438,10 @@ export default function HomePage() {
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center text-xs">₿</div>
                     <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-xs text-white">◎</div>
-                    <div className="w-5 h-5 rounded-full bg-gray-800 flex items-center justify-center text-xs text-white">≡</div>
+                    <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-xs text-secondary-foreground">≡</div>
                     <span className="text-xs text-muted-foreground ml-auto">2</span>
-                    <TrendingUp className="w-4 h-4" />
-                    <span className="text-xs">10%</span>
+                    <TrendingUp className="w-4 h-4 text-foreground" />
+                    <span className="text-xs text-foreground">10%</span>
                   </div>
 
                   {/* Copy Button */}
@@ -529,10 +529,10 @@ export default function HomePage() {
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center text-xs">₿</div>
                     <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-xs text-white">◎</div>
-                    <div className="w-5 h-5 rounded-full bg-gray-800 flex items-center justify-center text-xs text-white">≡</div>
+                    <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-xs text-secondary-foreground">≡</div>
                     <span className="text-xs text-muted-foreground ml-auto">2</span>
                     <TrendingUp className="w-4 w-4" />
-                    <span className="text-xs">10%</span>
+                    <span className="text-xs text-foreground">10%</span>
                   </div>
 
                   {/* Copy Button */}

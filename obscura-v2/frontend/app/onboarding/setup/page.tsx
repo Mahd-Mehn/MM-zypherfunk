@@ -59,7 +59,7 @@ export default function SetupIdentityPage() {
           <div className="relative">
             <Avatar className="w-24 h-24">
               <AvatarImage src={profileImage || undefined} />
-              <AvatarFallback className="bg-gray-400 text-white text-2xl">
+              <AvatarFallback className="bg-muted text-muted-foreground text-2xl">
                 <svg viewBox="0 0 24 24" fill="none" className="w-12 h-12">
                   <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/>
                 </svg>
@@ -85,7 +85,7 @@ export default function SetupIdentityPage() {
               className="h-12 px-4 pr-10 border-cyan-200 focus:border-primary focus:ring-primary"
             />
             {isAvailable && (
-              <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />
+              <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-success" />
             )}
           </div>
         </div>
